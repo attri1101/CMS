@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaCare — Admin Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Stat Grid ──────────────────── */
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+
+    .stat-card-accent { border-color: var(--accent-border); box-shadow: var(--glow-sm); }
+    .stat-icon-teal   { background: var(--accent-dim); color: var(--accent); }
+    .stat-icon-green  { background: rgba(0,217,126,0.14); color: var(--success); }
+    .stat-icon-amber  { background: rgba(245,186,0,0.14); color: var(--warning); }
+    .stat-icon-purple { background: rgba(123,143,236,0.14); color: var(--s-booked); }
+
+    /* ── Tally / Cards ─────────────── */
+    .tally-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--r-lg); overflow: hidden;
+    }
+    .tally-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .tally-body { padding: 20px; }
+
+    .payment-method-row {
+      display: flex; align-items: center; gap: 14px; padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .payment-method-row:last-child { border-bottom: none; }
+    .pm-icon {
+      width: 38px; height: 38px; border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      flex-shrink: 0;
+    }
+    .pm-label { font-size: 0.9rem; font-weight: 600; color: var(--text-1); }
+    .pm-count { font-size: 0.78rem; color: var(--text-2); margin-top: 1px; }
+    .pm-amount { font-size: 1.2rem; font-weight: 800; color: var(--text-1); margin-left: auto; }
+    .pm-pct   { font-size: 0.72rem; color: var(--text-3); text-align: right; margin-top: 1px; }
+
+    .progress-row { height: 6px; border-radius: var(--r-full); background: var(--bg-hover); overflow: hidden; margin-top: 20px; display: flex; gap: 2px; }
+    .progress-seg { height: 100%; transition: width 0.8s ease; }
+    .progress-seg-green { background: var(--success); border-radius: var(--r-full) 0 0 var(--r-full); }
+    .progress-seg-teal  { background: var(--accent); }
+    .progress-seg-purple{ background: var(--s-booked); border-radius: 0 var(--r-full) var(--r-full) 0; }
+
+    /* ── Transactions ──────────────── */
+    .transactions-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+    .transactions-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .transactions-body { overflow-x: auto; }
+
+    /* ── Login blobs ───────────────── */
+    .login-blob1 { width: 450px; height: 450px; background: radial-gradient(circle, rgba(91,143,249,0.14), transparent 70%); top: -120px; right: -100px; }
+    .login-blob2 { width: 350px; height: 350px; background: radial-gradient(circle, rgba(0,205,216,0.1), transparent 70%); bottom: -80px; left: -80px; }
+
+    /* ── View sections ─────────────── */
+    .view-section { display: none; }
+    .view-section.active-view { display: block; }
+
+    /* ── Doctor Cards ──────────────── */
+    .doctor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; margin-bottom: 24px; }
+    .doctor-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg);
+      padding: 22px; cursor: pointer; transition: all var(--t-med); position: relative; overflow: hidden;
+    }
+    .doctor-card:hover { border-color: var(--accent-border); transform: translateY(-4px); box-shadow: var(--shadow-lg), var(--glow-sm); }
+    .doctor-card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+    .doctor-avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700; flex-shrink: 0;
+    }
+    .doctor-name { font-size: 1.05rem; font-weight: 700; color: var(--text-1); }
+    .doctor-spec { font-size: 0.78rem; color: var(--text-2); margin-top: 2px; }
+    .doctor-status-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: var(--r-full);
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .chip-active { background: rgba(0,217,126,0.12); color: var(--success); }
+    .chip-offline { background: rgba(255,255,255,0.06); color: var(--text-3); }
+    .doctor-stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+      padding-top: 16px; border-top: 1px solid var(--border);
+    }
+    .doctor-stat { text-align: center; }
+    .doctor-stat-val { font-size: 1.15rem; font-weight: 800; color: var(--text-1); }
+    .doctor-stat-label { font-size: 0.68rem; color: var(--text-3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .doctor-tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+    .doctor-tag {
+      padding: 3px 9px; border-radius: var(--r-full);
+      font-size: 0.68rem; font-weight: 600;
+      background: var(--bg-hover); color: var(--text-2); border: 1px solid var(--border);
+    }
+
+    /* ── Doctor Detail Drawer ──────── */
+    .drawer-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+    .drawer-panel {
+      position: fixed; top: 0; right: -560px; width: 540px; height: 100vh;
+      background: var(--bg-surface); border-left: 1px solid var(--border-hover);
+      z-index: 101; transition: right 0.3s ease; display: flex; flex-direction: column;
+      box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+    }
+    .drawer-panel.open { right: 0; }
+    .drawer-header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg-card); flex-shrink: 0;
+    }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 22px; }
+    .drawer-doctor-hero {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+    }
+    .drawer-doctor-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; font-weight: 800; flex-shrink: 0;
+    }
+    .drawer-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .drawer-stat-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 16px;
+    }
+    .drawer-stat-card .stat-label { font-size: 0.68rem; }
+    .drawer-stat-card .stat-value { font-size: 1.3rem; margin: 3px 0 1px; }
+
+    /* ── Mini bar chart ─────────────── */
+    .mini-chart { display: flex; align-items: flex-end; gap: 4px; height: 60px; padding-top: 4px; }
+    .mini-bar {
+      flex: 1; border-radius: 3px 3px 0 0;
+      transition: height 0.5s ease, background 0.3s ease;
+      position: relative;
+    }
+    .mini-bar:hover { filter: brightness(1.3); }
+    .mini-bar-label {
+      position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
+      font-size: 0.58rem; color: var(--text-3); white-space: nowrap;
+    }
+    .chart-section { margin-top: 4px; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════ DASHBOARD ════════════════════════ -->
+<div id="dashboard">
+  <div class="app-layout">
+
+    <!-- ───── Sidebar ───── -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🏥</div>
+        <span class="sidebar-logo-text">NovaCare</span>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">Revenue</div>
+        <div class="nav-item active" onclick="switchView('tally', this)">
+          <span class="nav-item-icon">📊</span> Today's Tally
+        </div>
+        <div class="nav-item" onclick="switchView('transactions', this)">
+          <span class="nav-item-icon">🧾</span> Transactions
+        </div>
+      </div>
+
+      <div class="nav-section" style="margin-top:8px;">
+        <div class="nav-section-label">Clinic</div>
+        <div class="nav-item" onclick="switchView('doctors', this)">
+          <span class="nav-item-icon">🩺</span> Doctors
+          <span class="nav-badge" id="doctor-count">3</span>
+        </div>
+        <div class="nav-item" onclick="switchView('staff', this)">
+          <span class="nav-item-icon">👥</span> Staff
+        </div>
+        <div class="nav-item">
+          <span class="nav-item-icon">⚙️</span> Settings
+        </div>
+      </div>
+
+      <!-- Clinic Status -->
+      <div style="margin: 8px 6px 0; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-md);">
+        <div class="section-title" style="margin-bottom:10px;">Clinic Status</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:0.8rem;">
+          <div class="notif-dot"></div>
+          <span style="color:var(--text-1);">Clinic is <strong style="color:var(--success)">Open</strong></span>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-3);margin-top:6px;">3 doctors · 2 receptionists</div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar">RS</div>
+          <div>
+            <div class="sidebar-user-name">Rajeev Sharma</div>
+            <div class="sidebar-user-role">Clinic Admin · Owner</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ───── Main Content ───── -->
+    <div class="main-content">
+
+      <!-- ═══════ HEADER ═══════ -->
+      <div class="main-header">
+        <div>
+          <div class="main-header-title" id="view-title">End-of-Day Tally</div>
+          <div class="main-header-sub" id="view-subtitle">Today · Loading…</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;" id="header-actions">
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--text-2);">
+            <div class="notif-dot"></div> Live · Auto-refreshes
+          </div>
+          <button class="btn btn-ghost btn-sm">⬇ Export CSV</button>
+        </div>
+      </div>
+
+      <!-- ═══════ MAIN BODY ═══════ -->
+      <div class="main-body">
+
+        <!-- ──────────────────── VIEW 1: TALLY ──────────────────── -->
+        <div id="view-tally" class="view-section active-view">
+          <div class="stat-grid">
+            <div class="stat-card stat-card-accent animate-in">
+              <div class="stat-icon stat-icon-teal">💰</div>
+              <div class="stat-label">Total Collected Today</div>
+              <div class="stat-value"><span>₹</span>14,200</div>
+              <div class="stat-sub">↑ From 7 completed visits</div>
+            </div>
+            <div class="stat-card animate-in delay-1">
+              <div class="stat-icon stat-icon-green">💵</div>
+              <div class="stat-label">Cash</div>
+              <div class="stat-value"><span>₹</span>6,500</div>
+              <div class="stat-sub">4 transactions · 45.8%</div>
+            </div>
+            <div class="stat-card animate-in delay-2">
+              <div class="stat-icon stat-icon-teal">📱</div>
+              <div class="stat-label">UPI</div>
+              <div class="stat-value"><span>₹</span>5,700</div>
+              <div class="stat-sub">2 transactions · 40.1%</div>
+            </div>
+            <div class="stat-card animate-in delay-3">
+              <div class="stat-icon stat-icon-purple">💳</div>
+              <div class="stat-label">Card</div>
+              <div class="stat-value"><span>₹</span>2,000</div>
+              <div class="stat-sub">1 transaction · 14.1%</div>
+            </div>
+          </div>
+
+          <div class="stat-grid-3">
+            <div class="stat-card animate-in delay-2">
+              <div class="stat-label">Total Patients Today</div>
+              <div class="stat-value">7</div>
+              <div class="stat-sub">5 completed · 1 no-show</div>
+            </div>
+            <div class="stat-card animate-in delay-3">
+              <div class="stat-label">Pending Payments</div>
+              <div class="stat-value" style="color:var(--warning);">1</div>
+              <div class="stat-sub">Priya Singh · ₹800 due</div>
+            </div>
+            <div class="stat-card animate-in delay-4">
+              <div class="stat-label">Avg per Visit</div>
+              <div class="stat-value"><span>₹</span>2,033</div>
+              <div class="stat-sub">Based on completed visits</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+            <div class="tally-card animate-in delay-1">
+              <div class="tally-header">
+                <div>
+                  <div style="font-size:0.9rem;font-weight:700;">Payment Breakdown</div>
+                  <div style="font-size:0.75rem;color:var(--text-2);margin-top:2px;">Today's collection by method</div>
+                </div>
+                <span class="badge badge-done">Balanced ✓</span>
+              </div>
+              <div class="tally-body">
+                <div class="payment-method-row">
+                  <div class="pm-icon" style="background:rgba(0,217,126,0.14);">💵</div>
+                  <div><div class="pm-label">Cash</div><div class="pm-count">4 transactions</div></div>
+                  <div style="margin-left:auto;text-align:right;"><div class="pm-amount">₹6,500</div><div class="pm-pct">45.8%</div></div>
+                </div>
+                <div class="payment-method-row">
+                  <div class="pm-icon" style="background:rgba(0,205,216,0.14);">📱</div>
+                  <div><div class="pm-label">UPI</div><div class="pm-count">2 transactions</div></div>
+                  <div style="margin-left:auto;text-align:right;"><div class="pm-amount">₹5,700</div><div class="pm-pct">40.1%</div></div>
+                </div>
+                <div class="payment-method-row">
+                  <div class="pm-icon" style="background:rgba(123,143,236,0.14);">💳</div>
+                  <div><div class="pm-label">Card</div><div class="pm-count">1 transaction</div></div>
+                  <div style="margin-left:auto;text-align:right;"><div class="pm-amount">₹2,000</div><div class="pm-pct">14.1%</div></div>
+                </div>
+                <div class="progress-row">
+                  <div class="progress-seg progress-seg-green" style="width:45.8%"></div>
+                  <div class="progress-seg progress-seg-teal" style="width:40.1%"></div>
+                  <div class="progress-seg progress-seg-purple" style="width:14.1%"></div>
+                </div>
+                <div style="display:flex;gap:14px;margin-top:10px;">
+                  <div style="display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--text-2);"><div style="width:8px;height:8px;border-radius:50%;background:var(--success);"></div>Cash</div>
+                  <div style="display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--text-2);"><div style="width:8px;height:8px;border-radius:50%;background:var(--accent);"></div>UPI</div>
+                  <div style="display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--text-2);"><div style="width:8px;height:8px;border-radius:50%;background:var(--s-booked);"></div>Card</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="tally-card animate-in delay-2">
+              <div class="tally-header">
+                <div>
+                  <div style="font-size:0.9rem;font-weight:700;">Reconciliation Check</div>
+                  <div style="font-size:0.75rem;color:var(--text-2);margin-top:2px;">Digital tally vs physical cashbox</div>
+                </div>
+              </div>
+              <div class="tally-body" style="display:flex;flex-direction:column;gap:14px;">
+                <div style="padding:14px;background:rgba(0,217,126,0.06);border:1px solid rgba(0,217,126,0.2);border-radius:var(--r-md);">
+                  <div style="font-size:0.72rem;color:var(--success);font-weight:700;margin-bottom:4px;">✓ NO DISCREPANCY DETECTED</div>
+                  <div style="font-size:0.82rem;color:var(--text-1);">Digital total matches expected cashbox: <strong>₹6,500</strong></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;font-size:0.86rem;">
+                  <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">System calculated total</span><span style="font-weight:700;">₹14,200</span></div>
+                  <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Cash in drawer (expected)</span><span style="font-weight:700;">₹6,500</span></div>
+                  <div class="divider" style="margin:4px 0;"></div>
+                  <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Pending bills</span><span style="font-weight:700;color:var(--warning);">₹800 (1)</span></div>
+                  <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">No-Shows written off</span><span style="font-weight:700;color:var(--text-3);">₹0</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ──────────────────── VIEW 2: TRANSACTIONS ──────────────────── -->
+        <div id="view-transactions" class="view-section">
+          <div class="transactions-card animate-in">
+            <div class="transactions-header">
+              <div>
+                <div style="font-size:0.9rem;font-weight:700;">Today's Transactions</div>
+                <div style="font-size:0.75rem;color:var(--text-2);margin-top:2px;">All billed visits for today</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <div class="search-bar" style="width:220px;padding:7px 12px;">
+                  <span class="search-icon">🔍</span>
+                  <input type="text" placeholder="Search by patient…" oninput="filterTx(this.value)" />
+                </div>
+              </div>
+            </div>
+            <div class="transactions-body">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th><th>Patient</th><th>Doctor</th><th>Time</th><th>Visit Type</th><th>Amount</th><th>Method</th><th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tx-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ──────────────────── VIEW 3: DOCTORS ──────────────────── -->
+        <div id="view-doctors" class="view-section">
+
+          <!-- Clinic-wide doctor stats -->
+          <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="stat-card stat-card-accent animate-in">
+              <div class="stat-icon stat-icon-teal">🩺</div>
+              <div class="stat-label">Doctors Mapped</div>
+              <div class="stat-value">3</div>
+              <div class="stat-sub">2 active today · 1 on leave</div>
+            </div>
+            <div class="stat-card animate-in delay-1">
+              <div class="stat-icon stat-icon-green">👥</div>
+              <div class="stat-label">Total Patients Today</div>
+              <div class="stat-value">14</div>
+              <div class="stat-sub">Across all doctors</div>
+            </div>
+            <div class="stat-card animate-in delay-2">
+              <div class="stat-icon stat-icon-amber">⏱</div>
+              <div class="stat-label">Avg Visit Duration</div>
+              <div class="stat-value">4.2<span>min</span></div>
+              <div class="stat-sub">Below 5-min target ✓</div>
+            </div>
+            <div class="stat-card animate-in delay-3">
+              <div class="stat-icon stat-icon-purple">💰</div>
+              <div class="stat-label">Revenue per Doctor</div>
+              <div class="stat-value"><span>₹</span>4,733</div>
+              <div class="stat-sub">Average today</div>
+            </div>
+          </div>
+
+          <!-- Doctor Cards -->
+          <div class="section-header" style="margin-bottom:16px;">
+            <div class="section-title">Your Clinic Doctors</div>
+            <div class="pill-tabs">
+              <button class="pill-tab active" onclick="filterDoctors('all', this)">All</button>
+              <button class="pill-tab" onclick="filterDoctors('active', this)">Active</button>
+              <button class="pill-tab" onclick="filterDoctors('leave', this)">On Leave</button>
+            </div>
+          </div>
+
+          <div class="doctor-grid" id="doctor-grid">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- ──────────────────── VIEW 4: STAFF (placeholder) ──────────────────── -->
+        <div id="view-staff" class="view-section">
+          <div class="empty-state" style="min-height:400px;">
+            <div class="empty-state-icon">👥</div>
+            <div style="font-size:1rem;font-weight:600;color:var(--text-2);">Staff Management</div>
+            <div class="empty-state-text">View and manage your receptionists and support staff.<br/>This module is coming in the next update.</div>
+          </div>
+        </div>
+
+      </div><!-- /main-body -->
+    </div><!-- /main-content -->
+  </div><!-- /app-layout -->
+</div>
+
+<!-- ════════════════════════ DOCTOR DETAIL DRAWER ════════════════════════ -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer-panel" id="drawer-panel">
+  <div class="drawer-header">
+    <div>
+      <div style="font-size:1rem;font-weight:700;" id="drawer-title">Doctor Details</div>
+      <div style="font-size:0.78rem;color:var(--text-2);margin-top:2px;" id="drawer-subtitle">Performance overview</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeDrawer()">✕ Close</button>
+  </div>
+  <div class="drawer-body" id="drawer-body">
+    <!-- Rendered by JS -->
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ── DATA ───────────────────────────────────────────────────────
+
+const doctors = [
+  {
+    id: 1,
+    name: 'Dr. Meena Sharma',
+    initials: 'MS',
+    spec: 'MBBS · General Practice',
+    experience: '12 years',
+    phone: '9876500001',
+    email: 'dr.meena@clinic.in',
+    joinedDate: 'Jan 2014',
+    status: 'active',
+    consultFee: 500,
+    color: 'av-teal',
+    schedule: 'Mon–Sat · 9 AM – 1 PM, 5 PM – 8 PM',
+    today: {
+      patients: 7, completed: 5, pending: 1, noshow: 1,
+      revenue: 8200, avgDuration: '3.8 min',
+      cash: 3500, upi: 3200, card: 1500
+    },
+    weekly: [6, 8, 5, 7, 9, 4, 0],
+    totalPatients: 1842,
+    totalRevenue: 896000,
+    recentPatients: [
+      { name: 'Sunita Rao',   time: '9:42 AM',  type: 'Follow-up', amount: 500,  status: 'Paid', method: 'Cash' },
+      { name: 'Meena Devi',   time: '10:28 AM', type: 'New',       amount: 300,  status: 'Paid', method: 'Cash' },
+      { name: 'Priya Singh',  time: '10:55 AM', type: 'Follow-up', amount: 800,  status: 'Pending', method: '—' },
+      { name: 'Ravi Kumar',   time: '11:22 AM', type: 'New',       amount: 300,  status: 'Paid', method: 'UPI' },
+      { name: 'Arjun Shah',   time: '11:58 AM', type: 'Follow-up', amount: 5400, status: 'Paid', method: 'UPI' },
+    ],
+    tags: ['General Medicine', 'Diabetes', 'Hypertension', 'Pediatrics']
+  },
+  {
+    id: 2,
+    name: 'Dr. Vivek Patel',
+    initials: 'VP',
+    spec: 'MBBS, MD · Dermatology',
+    experience: '8 years',
+    phone: '9876500002',
+    email: 'dr.vivek@clinic.in',
+    joinedDate: 'Mar 2018',
+    status: 'active',
+    consultFee: 700,
+    color: 'av-purple',
+    schedule: 'Mon–Fri · 10 AM – 2 PM',
+    today: {
+      patients: 5, completed: 4, pending: 1, noshow: 0,
+      revenue: 4800, avgDuration: '5.1 min',
+      cash: 2100, upi: 1700, card: 1000
+    },
+    weekly: [4, 5, 3, 6, 5, 0, 0],
+    totalPatients: 967,
+    totalRevenue: 654000,
+    recentPatients: [
+      { name: 'Anita Desai',   time: '10:15 AM', type: 'New',       amount: 700,  status: 'Paid',    method: 'Cash' },
+      { name: 'Raj Malhotra',  time: '10:48 AM', type: 'Follow-up', amount: 500,  status: 'Paid',    method: 'UPI' },
+      { name: 'Kavita Reddy',  time: '11:30 AM', type: 'New',       amount: 700,  status: 'Paid',    method: 'Cash' },
+      { name: 'Suresh Nair',   time: '12:05 PM', type: 'Follow-up', amount: 1200, status: 'Pending', method: '—' },
+    ],
+    tags: ['Dermatology', 'Skin Allergy', 'Cosmetic', 'Acne']
+  },
+  {
+    id: 3,
+    name: 'Dr. Aisha Khan',
+    initials: 'AK',
+    spec: 'MBBS, DGO · Gynecology',
+    experience: '15 years',
+    phone: '9876500003',
+    email: 'dr.aisha@clinic.in',
+    joinedDate: 'Sep 2012',
+    status: 'leave',
+    consultFee: 600,
+    color: 'av-amber',
+    schedule: 'Mon, Wed, Fri · 4 PM – 8 PM',
+    today: {
+      patients: 0, completed: 0, pending: 0, noshow: 0,
+      revenue: 0, avgDuration: '—',
+      cash: 0, upi: 0, card: 0
+    },
+    weekly: [3, 0, 4, 0, 3, 0, 0],
+    totalPatients: 1204,
+    totalRevenue: 718000,
+    recentPatients: [],
+    tags: ['Gynecology', 'Obstetrics', 'PCOD', 'Prenatal']
+  }
+];
+
+const transactions = [
+  { no:1, patient:'Sunita Rao',   doctor:'Dr. Meena',  time:'9:42 AM',  type:'Follow-up', amount:500,  method:'Cash', paid:true  },
+  { no:2, patient:'Anita Desai',  doctor:'Dr. Vivek',  time:'10:15 AM', type:'New',       amount:700,  method:'Cash', paid:true  },
+  { no:3, patient:'Meena Devi',   doctor:'Dr. Meena',  time:'10:28 AM', type:'New',       amount:300,  method:'Cash', paid:true  },
+  { no:4, patient:'Raj Malhotra', doctor:'Dr. Vivek',  time:'10:48 AM', type:'Follow-up', amount:500,  method:'UPI',  paid:true  },
+  { no:5, patient:'Priya Singh',  doctor:'Dr. Meena',  time:'10:55 AM', type:'Follow-up', amount:800,  method:null,   paid:false },
+  { no:6, patient:'Ravi Kumar',   doctor:'Dr. Meena',  time:'11:22 AM', type:'New',       amount:300,  method:'UPI',  paid:true  },
+  { no:7, patient:'Kavita Reddy', doctor:'Dr. Vivek',  time:'11:30 AM', type:'New',       amount:700,  method:'Cash', paid:true  },
+  { no:8, patient:'Arjun Shah',   doctor:'Dr. Meena',  time:'11:58 AM', type:'Follow-up', amount:5400, method:'UPI',  paid:true  },
+  { no:9, patient:'Suresh Nair',  doctor:'Dr. Vivek',  time:'12:05 PM', type:'Follow-up', amount:1200, method:null,   paid:false },
+  { no:10,patient:'Kiran Patel',  doctor:'Dr. Meena',  time:'12:34 PM', type:'New',       amount:500,  method:'Cash', paid:true  },
+  { no:11,patient:'Deepak Verma', doctor:'Dr. Meena',  time:'—',        type:'New',       amount:0,    method:null,   paid:false, noshow:true },
+  { no:12,patient:'Extra Patient',doctor:'Dr. Vivek',  time:'1:10 PM',  type:'Follow-up', amount:2000, method:'Card', paid:true  },
+];
+
+let txFilter = '';
+let doctorFilter = 'all';
+
+// ── VIEW SWITCHING ─────────────────────────────────────────────
+
+const viewConfig = {
+  tally:        { title: 'End-of-Day Tally',  subtitle: 'today-date' },
+  transactions: { title: 'Transactions',       subtitle: 'All billed visits today' },
+  doctors:      { title: 'Doctors Overview',   subtitle: 'Mapped doctors & performance' },
+  staff:        { title: 'Staff Management',   subtitle: 'Receptionists & support staff' },
+};
+
+function switchView(viewName, navEl) {
+  // toggle nav
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+
+  // toggle views
+  document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active-view'));
+  const target = document.getElementById('view-' + viewName);
+  if (target) target.classList.add('active-view');
+
+  // update header
+  const cfg = viewConfig[viewName];
+  document.getElementById('view-title').textContent = cfg.title;
+  if (cfg.subtitle === 'today-date') {
+    const d = new Date();
+    document.getElementById('view-subtitle').textContent = 'Today · ' + d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  } else {
+    document.getElementById('view-subtitle').textContent = cfg.subtitle;
+  }
+
+  // header actions
+  const ha = document.getElementById('header-actions');
+  if (viewName === 'tally') {
+    ha.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--text-2);"><div class="notif-dot"></div> Live · Auto-refreshes</div>
+      <button class="btn btn-ghost btn-sm">⬇ Export CSV</button>`;
+  } else if (viewName === 'doctors') {
+    ha.innerHTML = `<button class="btn btn-secondary btn-sm">+ Add Doctor</button>`;
+  } else {
+    ha.innerHTML = `<button class="btn btn-ghost btn-sm">⬇ Export CSV</button>`;
+  }
+
+  // render data
+  if (viewName === 'transactions') renderTx();
+  if (viewName === 'doctors') renderDoctors();
+}
+
+// ── TRANSACTIONS ───────────────────────────────────────────────
+
+function renderTx() {
+  const tbody = document.getElementById('tx-body');
+  const filtered = transactions.filter(t =>
+    !txFilter || t.patient.toLowerCase().includes(txFilter.toLowerCase()) || t.doctor.toLowerCase().includes(txFilter.toLowerCase())
+  );
+  tbody.innerHTML = filtered.map(t => {
+    const methodBadge = t.method ? `<span class="badge badge-${t.method.toLowerCase()}">${t.method}</span>` : '<span style="color:var(--text-3);font-size:0.8rem;">—</span>';
+    const statusBadge = t.noshow
+      ? `<span class="badge badge-noshow">No Show</span>`
+      : t.paid
+        ? `<span class="badge badge-done">Paid ✓</span>`
+        : `<span class="badge badge-arrived">Pending</span>`;
+    const amountStr = t.amount ? `₹${t.amount.toLocaleString('en-IN')}` : '—';
+    return `<tr>
+      <td style="color:var(--text-3);font-size:0.78rem;">#${t.no}</td>
+      <td style="font-weight:600;">${t.patient}</td>
+      <td style="font-size:0.82rem;color:var(--accent);">${t.doctor}</td>
+      <td style="color:var(--text-2);">${t.time}</td>
+      <td><span style="font-size:0.78rem;color:var(--text-2);">${t.type}</span></td>
+      <td style="font-weight:700;font-size:0.95rem;">${amountStr}</td>
+      <td>${methodBadge}</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTx(val) { txFilter = val; renderTx(); }
+
+// ── DOCTORS ────────────────────────────────────────────────────
+
+function renderDoctors() {
+  const grid = document.getElementById('doctor-grid');
+  const filtered = doctors.filter(d =>
+    doctorFilter === 'all' || d.status === doctorFilter
+  );
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;min-height:200px;">
+      <div class="empty-state-icon">🩺</div>
+      <div class="empty-state-text">No doctors match this filter</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map((d, i) => `
+    <div class="doctor-card animate-in delay-${i+1}" onclick="openDoctorDrawer(${d.id})">
+      <div class="doctor-card-header">
+        <div class="doctor-avatar ${d.color}">${d.initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="doctor-name">${d.name}</div>
+          <div class="doctor-spec">${d.spec}</div>
+        </div>
+        <div class="doctor-status-chip ${d.status === 'active' ? 'chip-active' : 'chip-offline'}">
+          <div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>
+          ${d.status === 'active' ? 'Active Now' : 'On Leave'}
+        </div>
+      </div>
+
+      <div class="doctor-tag-row">
+        ${d.tags.map(t => `<span class="doctor-tag">${t}</span>`).join('')}
+      </div>
+
+      <div class="doctor-stats-row" style="margin-top:16px;">
+        <div class="doctor-stat">
+          <div class="doctor-stat-val">${d.today.patients}</div>
+          <div class="doctor-stat-label">Patients Today</div>
+        </div>
+        <div class="doctor-stat">
+          <div class="doctor-stat-val" style="color:var(--success);">₹${d.today.revenue > 0 ? d.today.revenue.toLocaleString('en-IN') : '0'}</div>
+          <div class="doctor-stat-label">Revenue Today</div>
+        </div>
+        <div class="doctor-stat">
+          <div class="doctor-stat-val">${d.today.avgDuration}</div>
+          <div class="doctor-stat-label">Avg Duration</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);">
+        <span style="font-size:0.75rem;color:var(--text-3);">Consult fee: ₹${d.consultFee}</span>
+        <span style="font-size:0.78rem;font-weight:600;color:var(--accent);">View Details →</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterDoctors(filter, btn) {
+  doctorFilter = filter;
+  document.querySelectorAll('#view-doctors .pill-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderDoctors();
+}
+
+// ── DOCTOR DRAWER ──────────────────────────────────────────────
+
+function openDoctorDrawer(id) {
+  const d = doctors.find(x => x.id === id);
+  if (!d) return;
+
+  document.getElementById('drawer-title').textContent = d.name;
+  document.getElementById('drawer-subtitle').textContent = d.spec + ' · ' + d.experience;
+
+  const body = document.getElementById('drawer-body');
+  const weekDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const maxWeek = Math.max(...d.weekly, 1);
+
+  body.innerHTML = `
+    <!-- Hero -->
+    <div class="drawer-doctor-hero">
+      <div class="drawer-doctor-avatar ${d.color}">${d.initials}</div>
+      <div style="flex:1;">
+        <div style="font-size:1.1rem;font-weight:700;">${d.name}</div>
+        <div style="font-size:0.82rem;color:var(--text-2);margin-top:2px;">${d.spec}</div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <span class="doctor-status-chip ${d.status === 'active' ? 'chip-active' : 'chip-offline'}">
+            <div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>
+            ${d.status === 'active' ? 'Active Now' : 'On Leave'}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact & info -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="section-title">Doctor Information</div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;display:flex;flex-direction:column;gap:8px;font-size:0.82rem;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Phone</span><span style="font-weight:600;">${d.phone}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Email</span><span style="font-weight:600;">${d.email}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Consult Fee</span><span style="font-weight:600;color:var(--success);">₹${d.consultFee}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Schedule</span><span style="font-weight:600;">${d.schedule}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Joined</span><span style="font-weight:600;">${d.joinedDate}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Experience</span><span style="font-weight:600;">${d.experience}</span></div>
+      </div>
+    </div>
+
+    <!-- Specialties -->
+    <div>
+      <div class="section-title" style="margin-bottom:8px;">Specializations</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${d.tags.map(t => `<span class="doctor-tag">${t}</span>`).join('')}
+      </div>
+    </div>
+
+    <!-- Today's Performance -->
+    <div>
+      <div class="section-title" style="margin-bottom:10px;">Today's Performance</div>
+      <div class="drawer-stat-grid">
+        <div class="drawer-stat-card">
+          <div class="stat-label">Patients Seen</div>
+          <div class="stat-value">${d.today.patients}</div>
+          <div class="stat-sub">${d.today.completed} done · ${d.today.noshow} no-show</div>
+        </div>
+        <div class="drawer-stat-card">
+          <div class="stat-label">Revenue</div>
+          <div class="stat-value" style="color:var(--success);"><span>₹</span>${d.today.revenue.toLocaleString('en-IN')}</div>
+          <div class="stat-sub">${d.today.pending} bill pending</div>
+        </div>
+        <div class="drawer-stat-card">
+          <div class="stat-label">Avg Visit</div>
+          <div class="stat-value">${d.today.avgDuration}</div>
+          <div class="stat-sub">${parseFloat(d.today.avgDuration) <= 5 ? '✓ Under target' : '⚠ Above 5-min target'}</div>
+        </div>
+        <div class="drawer-stat-card">
+          <div class="stat-label">Payment Split</div>
+          <div class="stat-value" style="font-size:0.9rem;display:flex;gap:6px;margin-top:6px;">
+            <span style="color:var(--success);">₹${d.today.cash.toLocaleString('en-IN')}</span>
+            <span style="color:var(--text-3);">·</span>
+            <span style="color:var(--accent);">₹${d.today.upi.toLocaleString('en-IN')}</span>
+            <span style="color:var(--text-3);">·</span>
+            <span style="color:var(--s-booked);">₹${d.today.card.toLocaleString('en-IN')}</span>
+          </div>
+          <div class="stat-sub">Cash · UPI · Card</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weekly patient chart -->
+    <div class="chart-section">
+      <div class="chart-header">
+        <div class="section-title">Weekly Patient Volume</div>
+        <div style="font-size:0.72rem;color:var(--text-3);">Last 7 days</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:16px 14px 28px;">
+        <div class="mini-chart">
+          ${d.weekly.map((v, i) => `
+            <div class="mini-bar" style="height:${Math.max(v / maxWeek * 100, 4)}%;background:${v > 0 ? 'var(--accent)' : 'var(--bg-hover)'};">
+              <div class="mini-bar-label">${weekDays[i]}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Lifetime stats -->
+    <div>
+      <div class="section-title" style="margin-bottom:10px;">Lifetime Stats</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;text-align:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--text-1);">${d.totalPatients.toLocaleString('en-IN')}</div>
+          <div style="font-size:0.72rem;color:var(--text-3);margin-top:2px;text-transform:uppercase;letter-spacing:0.05em;">Total Patients</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;text-align:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--success);">₹${(d.totalRevenue / 1000).toFixed(0)}K</div>
+          <div style="font-size:0.72rem;color:var(--text-3);margin-top:2px;text-transform:uppercase;letter-spacing:0.05em;">Total Revenue</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent patients for this doctor -->
+    <div>
+      <div class="section-title" style="margin-bottom:10px;">Today's Patient Log</div>
+      ${d.recentPatients.length === 0
+        ? `<div style="padding:20px;text-align:center;font-size:0.82rem;color:var(--text-3);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);">No patients seen today — doctor is on leave</div>`
+        : `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;">
+            <table class="data-table" style="font-size:0.82rem;">
+              <thead>
+                <tr><th>Patient</th><th>Time</th><th>Type</th><th>Amount</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                ${d.recentPatients.map(p => `
+                  <tr>
+                    <td style="font-weight:600;">${p.name}</td>
+                    <td style="color:var(--text-2);">${p.time}</td>
+                    <td style="color:var(--text-2);">${p.type}</td>
+                    <td style="font-weight:700;">₹${p.amount.toLocaleString('en-IN')}</td>
+                    <td><span class="badge ${p.status === 'Paid' ? 'badge-done' : 'badge-arrived'}">${p.status}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>`
+      }
+    </div>
+  `;
+
+  // open drawer
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('drawer-panel').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('drawer-panel').classList.remove('open');
+}
+
+// ── TOAST ──────────────────────────────────────────────────────
+
+function toast(msg, type = 'info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span>${type === 'success' ? '✓' : 'ℹ'}</span> ${msg}`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+
+function init() {
+  const d = new Date();
+  document.getElementById('view-subtitle').textContent =
+    'Today · ' + d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  renderTx();
+  renderDoctors();
+}
+
+// Start on load
+window.addEventListener('DOMContentLoaded', init);
+
+// ESC to close drawer
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+</script>
+</body>
+</html>

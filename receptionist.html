@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaCare — Receptionist Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Appointment cards ── */
+    .apt-list { display: flex; flex-direction: column; gap: 8px; }
+    .apt-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--r-md); cursor: pointer; transition: all 0.15s ease;
+      position: relative;
+    }
+    .apt-card:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+    .apt-card.selected { border-color: var(--accent-border); background: var(--accent-dim); }
+    .apt-time { font-size: 0.78rem; font-weight: 600; color: var(--text-2); width: 55px; flex-shrink: 0; text-align: center; }
+    .apt-info { flex: 1; min-width: 0; }
+    .apt-name { font-size: 0.88rem; font-weight: 600; color: var(--text-1); }
+    .apt-meta { font-size: 0.72rem; color: var(--text-3); margin-top: 1px; display: flex; gap: 8px; align-items: center; }
+    .apt-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* Source badges */
+    .source-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: var(--r-full); font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .source-walkin { background: rgba(245,186,0,0.12); color: var(--warning); }
+    .source-practo { background: rgba(0,205,216,0.12); color: var(--accent); }
+    .source-jivo { background: rgba(91,143,249,0.12); color: var(--info); }
+    .source-other { background: rgba(123,143,236,0.12); color: var(--s-booked); }
+
+    /* Mode badges */
+    .mode-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 7px; border-radius: var(--r-full); font-size: 0.6rem; font-weight: 700;
+    }
+    .mode-clinic { background: rgba(0,217,126,0.1); color: var(--success); }
+    .mode-video { background: rgba(91,143,249,0.1); color: var(--info); }
+
+    /* Tabs */
+    .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-tab {
+      padding: 5px 12px; border-radius: var(--r-full); font-size: 0.75rem; font-weight: 600;
+      background: var(--bg-input); border: 1px solid var(--border); color: var(--text-2);
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .filter-tab:hover { border-color: var(--border-hover); }
+    .filter-tab.active { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
+
+    /* Detail panel */
+    .detail-panel { flex: 0 0 340px; }
+    .detail-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+    .detail-header { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+    .detail-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+    .detail-row { display: flex; justify-content: space-between; font-size: 0.82rem; }
+    .detail-label { color: var(--text-2); }
+    .detail-value { font-weight: 600; color: var(--text-1); }
+
+    /* Status flow buttons */
+    .status-flow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+    /* Booking modal overlay */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-card {
+      background: var(--bg-card); border: 1px solid var(--border-hover);
+      border-radius: var(--r-xl); width: 480px; max-height: 90vh; overflow-y: auto;
+      box-shadow: var(--shadow-lg); animation: fadeInUp 0.25s ease;
+    }
+    .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* Two-col layout */
+    .content-split { display: flex; gap: 20px; height: 100%; }
+    .content-main { flex: 1; min-width: 0; }
+
+    /* Stats mini */
+    .mini-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+    .mini-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px; text-align: center; }
+    .mini-stat-val { font-size: 1.2rem; font-weight: 800; }
+    .mini-stat-label { font-size: 0.62rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🏥</div>
+      <span class="sidebar-logo-text">NovaCare</span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Today</div>
+      <div class="nav-item active" onclick="switchView('appointments', this)">
+        <span class="nav-item-icon">📋</span> Appointments
+        <span class="nav-badge" id="apt-count">12</span>
+      </div>
+      <div class="nav-item" onclick="switchView('search', this)">
+        <span class="nav-item-icon">🔍</span> Search Patient
+      </div>
+      <div class="nav-item" onclick="switchView('payments', this)">
+        <span class="nav-item-icon">💳</span> Payments
+      </div>
+    </div>
+
+    <div class="nav-section" style="margin-top:8px;">
+      <div class="nav-section-label">Channels</div>
+      <div style="padding:6px;display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.78rem;padding:4px 0;">
+          <span style="color:var(--text-2);">🟢 Walk-in</span><span style="font-weight:600;">5</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.78rem;padding:4px 0;">
+          <span style="color:var(--text-2);">🌐 Practo</span><span style="font-weight:600;">3</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.78rem;padding:4px 0;">
+          <span style="color:var(--text-2);">💙 Jivo Care</span><span style="font-weight:600;">2</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.78rem;padding:4px 0;">
+          <span style="color:var(--text-2);">📞 Phone</span><span style="font-weight:600;">2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" style="background:linear-gradient(135deg,var(--warning),#FF8C00);">AK</div>
+        <div>
+          <div class="sidebar-user-name">Amit Kumar</div>
+          <div class="sidebar-user-role">Receptionist · Front Desk</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="main-header">
+      <div>
+        <div class="main-header-title" id="view-title">Today's Appointments</div>
+        <div class="main-header-sub" id="view-sub">Loading…</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary btn-sm" onclick="openBookingModal('walkin')">+ Walk-in</button>
+        <button class="btn btn-secondary btn-sm" onclick="openBookingModal('online')">+ Online Booking</button>
+      </div>
+    </div>
+
+    <div class="main-body" id="view-appointments">
+      <!-- Mini stats -->
+      <div class="mini-stats">
+        <div class="mini-stat"><div class="mini-stat-val" style="color:var(--accent);">12</div><div class="mini-stat-label">Total</div></div>
+        <div class="mini-stat"><div class="mini-stat-val" style="color:var(--warning);">4</div><div class="mini-stat-label">Waiting</div></div>
+        <div class="mini-stat"><div class="mini-stat-val" style="color:var(--s-progress);">2</div><div class="mini-stat-label">In Progress</div></div>
+        <div class="mini-stat"><div class="mini-stat-val" style="color:var(--success);">5</div><div class="mini-stat-label">Done</div></div>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="filter-tabs" id="status-filters">
+          <button class="filter-tab active" onclick="filterStatus('all', this)">All</button>
+          <button class="filter-tab" onclick="filterStatus('scheduled', this)">Scheduled</button>
+          <button class="filter-tab" onclick="filterStatus('arrived', this)">Arrived</button>
+          <button class="filter-tab" onclick="filterStatus('in-progress', this)">In Progress</button>
+          <button class="filter-tab" onclick="filterStatus('completed', this)">Completed</button>
+          <button class="filter-tab" onclick="filterStatus('no-show', this)">No-Show</button>
+        </div>
+        <div class="filter-tabs" id="source-filters">
+          <button class="filter-tab active" onclick="filterSource('all', this)">All Sources</button>
+          <button class="filter-tab" onclick="filterSource('walkin', this)">Walk-in</button>
+          <button class="filter-tab" onclick="filterSource('online', this)">Online</button>
+        </div>
+      </div>
+
+      <!-- Content split -->
+      <div class="content-split">
+        <div class="content-main">
+          <div class="apt-list" id="apt-list">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Detail panel -->
+        <div class="detail-panel" id="detail-panel">
+          <div class="detail-card">
+            <div class="detail-header">
+              <div style="font-size:0.9rem;font-weight:700;">Appointment Details</div>
+            </div>
+            <div class="detail-body" id="detail-body">
+              <div style="text-align:center;padding:30px 0;color:var(--text-3);font-size:0.82rem;">
+                <div style="font-size:1.8rem;margin-bottom:8px;opacity:0.3;">📋</div>
+                Select an appointment to view details
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Booking Modal -->
+<div class="modal-overlay" id="booking-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:1rem;font-weight:700;" id="modal-title">New Walk-in Appointment</div>
+        <div style="font-size:0.78rem;color:var(--text-2);margin-top:2px;" id="modal-sub">Add patient to today's schedule</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeBookingModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="form-group">
+        <label class="form-label">Patient Name *</label>
+        <input class="form-input" type="text" id="b-name" placeholder="Full name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number *</label>
+        <input class="form-input" type="tel" id="b-phone" placeholder="9876543210" maxlength="10" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Age</label>
+          <input class="form-input" type="number" id="b-age" placeholder="e.g. 34" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gender</label>
+          <select class="form-input" id="b-gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Doctor *</label>
+        <select class="form-input" id="b-doctor">
+          <option value="">Select doctor</option>
+          <option value="Dr. Meena Sharma">Dr. Meena Sharma — General Practice</option>
+          <option value="Dr. Vivek Patel">Dr. Vivek Patel — Dermatology</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Visit Type</label>
+          <select class="form-input" id="b-type"><option>New Patient</option><option>Follow-up</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preferred Time</label>
+          <input class="form-input" type="time" id="b-time" />
+        </div>
+      </div>
+
+      <!-- Online-specific fields (hidden for walk-in) -->
+      <div id="online-fields" class="hidden">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Source Platform</label>
+            <select class="form-input" id="b-source"><option value="practo">Practo</option><option value="jivo">Jivo Care</option><option value="other">Other / Phone</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Consultation Mode *</label>
+            <select class="form-input" id="b-mode"><option value="in-clinic">🏥 In-Clinic Visit</option><option value="video">📹 Video Consultation</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Booking Reference ID</label>
+          <input class="form-input" type="text" id="b-ref" placeholder="e.g. PRG-12345 (optional)" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeBookingModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitBooking()">Add to Schedule</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const appointments = [
+  { id:1,  name:'Sunita Rao',    phone:'9876500010', age:'61F', type:'Follow-up', time:'9:00 AM',  doctor:'Dr. Meena Sharma', source:'walkin', mode:'in-clinic', status:'completed', amount:500, method:'Cash', ref:'' },
+  { id:2,  name:'Anita Desai',   phone:'9876500011', age:'29F', type:'New',       time:'9:15 AM',  doctor:'Dr. Vivek Patel',  source:'practo', mode:'in-clinic', status:'completed', amount:700, method:'UPI', ref:'PRG-88412' },
+  { id:3,  name:'Deepak Verma',  phone:'9876500012', age:'38M', type:'New',       time:'9:30 AM',  doctor:'Dr. Meena Sharma', source:'walkin', mode:'in-clinic', status:'no-show',   amount:0, method:null, ref:'' },
+  { id:4,  name:'Meena Devi',    phone:'9876500013', age:'34F', type:'New',       time:'10:00 AM', doctor:'Dr. Meena Sharma', source:'jivo',   mode:'in-clinic', status:'arrived',   amount:0, method:null, ref:'JC-7823' },
+  { id:5,  name:'Raj Malhotra',  phone:'9876500014', age:'45M', type:'Follow-up', time:'10:15 AM', doctor:'Dr. Vivek Patel',  source:'practo', mode:'video',     status:'in-progress', amount:0, method:null, ref:'PRG-88501' },
+  { id:6,  name:'Priya Singh',   phone:'9876500015', age:'28F', type:'Follow-up', time:'10:30 AM', doctor:'Dr. Meena Sharma', source:'walkin', mode:'in-clinic', status:'in-progress', amount:0, method:null, ref:'' },
+  { id:7,  name:'Ravi Kumar',    phone:'9876500016', age:'52M', type:'New',       time:'10:45 AM', doctor:'Dr. Meena Sharma', source:'walkin', mode:'in-clinic', status:'arrived',   amount:0, method:null, ref:'' },
+  { id:8,  name:'Kavita Reddy',  phone:'9876500017', age:'33F', type:'New',       time:'11:00 AM', doctor:'Dr. Vivek Patel',  source:'jivo',   mode:'video',     status:'scheduled', amount:0, method:null, ref:'JC-7830' },
+  { id:9,  name:'Arjun Shah',    phone:'9876500018', age:'45M', type:'Follow-up', time:'11:15 AM', doctor:'Dr. Meena Sharma', source:'walkin', mode:'in-clinic', status:'scheduled', amount:0, method:null, ref:'' },
+  { id:10, name:'Suresh Nair',   phone:'9876500019', age:'50M', type:'Follow-up', time:'11:30 AM', doctor:'Dr. Vivek Patel',  source:'practo', mode:'in-clinic', status:'scheduled', amount:0, method:null, ref:'PRG-88567' },
+  { id:11, name:'Kiran Patel',   phone:'9876500020', age:'8M',  type:'New',       time:'11:45 AM', doctor:'Dr. Meena Sharma', source:'walkin', mode:'in-clinic', status:'scheduled', amount:0, method:null, ref:'' },
+  { id:12, name:'Pooja Gupta',   phone:'9876500021', age:'26F', type:'New',       time:'12:00 PM', doctor:'Dr. Vivek Patel',  source:'other',  mode:'in-clinic', status:'completed', amount:700, method:'Card', ref:'' },
+];
+
+let statusFilter = 'all';
+let sourceFilter = 'all';
+let selectedAptId = null;
+let bookingType = 'walkin';
+
+const statusMap = {
+  'scheduled':   { label: 'Scheduled',   badge: 'badge-booked',  color: 'var(--s-booked)' },
+  'arrived':     { label: 'Arrived',      badge: 'badge-arrived', color: 'var(--s-arrived)' },
+  'in-progress': { label: 'In Progress',  badge: 'badge-progress',color: 'var(--s-progress)' },
+  'completed':   { label: 'Completed',    badge: 'badge-done',    color: 'var(--success)' },
+  'no-show':     { label: 'No Show',      badge: 'badge-noshow',  color: 'var(--error)' },
+  'cancelled':   { label: 'Cancelled',    badge: 'badge-noshow',  color: 'var(--text-3)' },
+};
+
+const sourceMap = {
+  'walkin': { label: 'Walk-in', badge: 'source-walkin', icon: '🚶' },
+  'practo': { label: 'Practo',  badge: 'source-practo', icon: '🌐' },
+  'jivo':   { label: 'Jivo Care', badge: 'source-jivo', icon: '💙' },
+  'other':  { label: 'Phone',   badge: 'source-other',  icon: '📞' },
+};
+
+function init() {
+  const d = new Date();
+  document.getElementById('view-sub').textContent =
+    d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'}) + ' · ' + appointments.length + ' appointments';
+  renderAppointments();
+}
+
+function renderAppointments() {
+  const list = document.getElementById('apt-list');
+  const filtered = appointments.filter(a => {
+    if (statusFilter !== 'all' && a.status !== statusFilter) return false;
+    if (sourceFilter === 'walkin' && a.source !== 'walkin') return false;
+    if (sourceFilter === 'online' && a.source === 'walkin') return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-3);">No appointments match this filter</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(a => {
+    const s = statusMap[a.status];
+    const src = sourceMap[a.source];
+    const modeClass = a.mode === 'video' ? 'mode-video' : 'mode-clinic';
+    const modeIcon = a.mode === 'video' ? '📹' : '🏥';
+    const isSelected = a.id === selectedAptId;
+    return `
+      <div class="apt-card ${isSelected ? 'selected' : ''}" onclick="selectApt(${a.id})">
+        <div class="apt-time">${a.time}</div>
+        <div class="patient-avatar ${a.source === 'walkin' ? 'av-amber' : 'av-teal'}" style="width:36px;height:36px;font-size:0.72rem;">
+          ${a.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
+        </div>
+        <div class="apt-info">
+          <div class="apt-name">${a.name}</div>
+          <div class="apt-meta">
+            <span>${a.age} · ${a.type}</span>
+            <span>·</span>
+            <span style="font-size:0.68rem;color:var(--text-3);">${a.doctor}</span>
+          </div>
+        </div>
+        <span class="source-badge ${src.badge}">${src.icon} ${src.label}</span>
+        <span class="mode-badge ${modeClass}">${modeIcon} ${a.mode === 'video' ? 'Video' : 'Clinic'}</span>
+        <span class="badge ${s.badge}">● ${s.label}</span>
+      </div>`;
+  }).join('');
+}
+
+function selectApt(id) {
+  selectedAptId = id;
+  renderAppointments();
+  const a = appointments.find(x => x.id === id);
+  if (!a) return;
+
+  const s = statusMap[a.status];
+  const src = sourceMap[a.source];
+  const body = document.getElementById('detail-body');
+
+  const nextActions = getNextActions(a);
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="patient-avatar ${a.source === 'walkin' ? 'av-amber' : 'av-teal'}" style="width:48px;height:48px;font-size:0.92rem;">
+        ${a.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
+      </div>
+      <div>
+        <div style="font-size:1rem;font-weight:700;">${a.name}</div>
+        <div style="font-size:0.78rem;color:var(--text-2);">${a.age} · ${a.type}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <span class="badge ${s.badge}">● ${s.label}</span>
+      <span class="source-badge ${src.badge}">${src.icon} ${src.label}</span>
+      <span class="mode-badge ${a.mode === 'video' ? 'mode-video' : 'mode-clinic'}">${a.mode === 'video' ? '📹 Video' : '🏥 In-Clinic'}</span>
+    </div>
+    <div class="divider"></div>
+    <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${a.phone}</span></div>
+    <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${a.time}</span></div>
+    <div class="detail-row"><span class="detail-label">Doctor</span><span class="detail-value">${a.doctor}</span></div>
+    ${a.ref ? `<div class="detail-row"><span class="detail-label">Booking Ref</span><span class="detail-value" style="color:var(--accent);">${a.ref}</span></div>` : ''}
+    ${a.amount ? `<div class="detail-row"><span class="detail-label">Amount</span><span class="detail-value" style="color:var(--success);">₹${a.amount.toLocaleString('en-IN')}</span></div>` : ''}
+    ${a.method ? `<div class="detail-row"><span class="detail-label">Payment</span><span class="detail-value">${a.method}</span></div>` : ''}
+    <div class="divider"></div>
+    <div class="status-flow">${nextActions}</div>
+  `;
+}
+
+function getNextActions(a) {
+  switch(a.status) {
+    case 'scheduled': return `
+      <button class="btn btn-success btn-sm" onclick="changeStatus(${a.id},'arrived')">✓ Mark Arrived</button>
+      <button class="btn btn-danger btn-sm" onclick="changeStatus(${a.id},'no-show')">✕ No Show</button>
+      <button class="btn btn-ghost btn-sm" onclick="changeStatus(${a.id},'cancelled')">Cancel</button>`;
+    case 'arrived': return `
+      <button class="btn btn-primary btn-sm" onclick="changeStatus(${a.id},'in-progress')">▶ Start Consultation</button>
+      <button class="btn btn-ghost btn-sm" onclick="changeStatus(${a.id},'no-show')">✕ No Show</button>`;
+    case 'in-progress': return `
+      <button class="btn btn-success btn-sm" onclick="completeVisit(${a.id})">✓ Complete & Bill</button>`;
+    case 'completed': return `<div style="font-size:0.78rem;color:var(--success);font-weight:600;">✓ Visit complete</div>`;
+    case 'no-show': return `<div style="font-size:0.78rem;color:var(--error);">Patient did not show up</div>
+      <button class="btn btn-ghost btn-sm" onclick="changeStatus(${a.id},'scheduled')">↩ Reschedule</button>`;
+    case 'cancelled': return `<div style="font-size:0.78rem;color:var(--text-3);">Appointment was cancelled</div>`;
+    default: return '';
+  }
+}
+
+function changeStatus(id, newStatus) {
+  const apt = appointments.find(a => a.id === id);
+  if (apt) {
+    apt.status = newStatus;
+    toast(`${apt.name} → ${statusMap[newStatus].label}`, 'success');
+    renderAppointments();
+    selectApt(id);
+  }
+}
+
+function completeVisit(id) {
+  const apt = appointments.find(a => a.id === id);
+  if (!apt) return;
+  apt.status = 'completed';
+  apt.amount = apt.type === 'Follow-up' ? 300 : 500;
+  apt.method = 'Cash';
+  toast(`Visit completed · ₹${apt.amount} billed`, 'success');
+  renderAppointments();
+  selectApt(id);
+}
+
+function filterStatus(status, btn) {
+  statusFilter = status;
+  document.querySelectorAll('#status-filters .filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderAppointments();
+}
+
+function filterSource(source, btn) {
+  sourceFilter = source;
+  document.querySelectorAll('#source-filters .filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderAppointments();
+}
+
+function openBookingModal(type) {
+  bookingType = type;
+  document.getElementById('booking-modal').classList.add('open');
+  if (type === 'walkin') {
+    document.getElementById('modal-title').textContent = 'New Walk-in Appointment';
+    document.getElementById('modal-sub').textContent = 'Patient is at the clinic right now';
+    document.getElementById('online-fields').classList.add('hidden');
+  } else {
+    document.getElementById('modal-title').textContent = 'New Online Booking';
+    document.getElementById('modal-sub').textContent = 'From Practo, Jivo Care, or phone call';
+    document.getElementById('online-fields').classList.remove('hidden');
+  }
+  const now = new Date();
+  document.getElementById('b-time').value = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+}
+
+function closeBookingModal() {
+  document.getElementById('booking-modal').classList.remove('open');
+}
+
+function submitBooking() {
+  const name = document.getElementById('b-name').value.trim();
+  const phone = document.getElementById('b-phone').value.trim();
+  const doctor = document.getElementById('b-doctor').value;
+  if (!name) { toast('Patient name is required', 'error'); return; }
+  if (!phone) { toast('Phone number is required', 'error'); return; }
+  if (!doctor) { toast('Please select a doctor', 'error'); return; }
+
+  const time = document.getElementById('b-time').value;
+  const age = document.getElementById('b-age').value;
+  const gender = document.getElementById('b-gender').value;
+  const type = document.getElementById('b-type').value;
+
+  let source = 'walkin', mode = 'in-clinic', ref = '';
+  if (bookingType === 'online') {
+    source = document.getElementById('b-source').value;
+    mode = document.getElementById('b-mode').value;
+    ref = document.getElementById('b-ref').value;
+  }
+
+  const h = parseInt(time.split(':')[0]);
+  const m = parseInt(time.split(':')[1]);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h > 12 ? h-12 : (h === 0 ? 12 : h);
+  const timeStr = `${h12}:${m.toString().padStart(2,'0')} ${ampm}`;
+
+  appointments.push({
+    id: appointments.length + 1,
+    name, phone,
+    age: `${age || '?'}${gender ? gender[0] : ''}`,
+    type, time: timeStr, doctor, source, mode,
+    status: bookingType === 'walkin' ? 'arrived' : 'scheduled',
+    amount: 0, method: null, ref
+  });
+
+  document.getElementById('apt-count').textContent = appointments.length;
+  closeBookingModal();
+  toast(`${name} added as ${bookingType === 'walkin' ? 'Walk-in' : 'Online'} appointment`, 'success');
+  renderAppointments();
+}
+
+function toast(msg, type = 'info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  const icons = { success:'✓', error:'✕', info:'ℹ', warning:'⚠' };
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span>${icons[type]||'ℹ'}</span> ${msg}`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+init();
+</script>
+</body>
+</html>

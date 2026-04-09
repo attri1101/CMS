@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaCare — Sign In</title>
+  <meta name="description" content="Sign in to NovaCare clinic management platform as a Doctor, Admin, or Receptionist." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .login-blob1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(0,205,216,0.16), transparent 70%); top: -140px; left: -150px; }
+    .login-blob2 { width: 450px; height: 450px; background: radial-gradient(circle, rgba(91,143,249,0.12), transparent 70%); bottom: -120px; right: -120px; }
+    .login-blob3 { width: 250px; height: 250px; background: radial-gradient(circle, rgba(0,205,216,0.08), transparent 70%); top: 45%; right: 20%; }
+
+    .login-card { max-width: 440px; }
+
+    /* Form Overrides to match design */
+    .form-label {
+      text-transform: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-1);
+      letter-spacing: normal;
+    }
+    .form-label .req { color: var(--error); margin-left: 2px; }
+    .form-input {
+      padding-top: 13px; padding-bottom: 13px;
+      font-size: 0.95rem;
+    }
+
+    /* Icon Overrides */
+    .action-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-3);
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .action-icon:hover { color: var(--text-1); }
+
+    /* Grid User Icon */
+    .wireframe-logo-container {
+      display: flex; justify-content: center; margin-bottom: 24px;
+    }
+    .user-icon-grid {
+      position: relative; width: 64px; height: 64px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-1);
+    }
+    .user-icon-grid::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 16px 16px;
+      background-position: center;
+      z-index: 0;
+    }
+    .user-icon-grid svg { position: relative; z-index: 1; width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.5; fill: none; }
+
+    /* Typography */
+    .auth-title { text-align: center; font-size: 1.6rem; font-weight: 700; color: var(--text-1); margin-bottom: 8px; letter-spacing: -0.01em; }
+    .auth-subtitle { text-align: center; font-size: 0.95rem; color: var(--text-2); margin-bottom: 32px; line-height: 1.5; }
+
+    /* Checkbox */
+    .check-row { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-1); cursor: pointer; }
+    .check-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+    
+    /* Links */
+    .auth-link { font-size: 0.9rem; color: var(--text-1); text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 4px; transition: color var(--t-fast); }
+    .auth-link:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+    .bottom-nav { text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--text-2); }
+    .bottom-nav a { font-weight: 600; color: var(--text-1); text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 4px; transition: color var(--t-fast); }
+    .bottom-nav a:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+    /* Role Tabs - subtle positioning */
+    .role-tabs { display: flex; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--r-md); padding: 4px; gap: 3px; margin-bottom: 24px; }
+    .role-tab {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 9px 8px; border-radius: calc(var(--r-md) - 3px);
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      color: var(--text-2); transition: all 0.2s ease; border: none; background: none; font-family: inherit;
+    }
+    .role-tab:hover { color: var(--text-1); background: rgba(255,255,255,0.04); }
+    .role-tab.active { background: var(--bg-card); color: var(--text-1); box-shadow: var(--shadow-sm); }
+    .role-tab.active.tab-doctor { color: var(--accent); }
+    .role-tab.active.tab-admin { color: var(--info); }
+    .role-tab.active.tab-recept { color: var(--warning); }
+
+    /* Dynamic accent override */
+    .theme-doctor .login-card { border-color: var(--accent-border); }
+    .theme-doctor .btn-primary { background: var(--accent); }
+    .theme-doctor .btn-primary:hover { background: var(--accent-light); box-shadow: 0 0 20px rgba(0,205,216,0.2); }
+
+    .theme-admin .login-card { border-color: rgba(91,143,249,0.24); box-shadow: var(--shadow-lg), 0 0 30px rgba(91,143,249,0.15); }
+    .theme-admin .btn-primary { background: var(--info); }
+    .theme-admin .btn-primary:hover { background: #7AABFF; box-shadow: 0 0 20px rgba(91,143,249,0.4); }
+    .theme-admin .form-input:focus { border-color: var(--info); box-shadow: 0 0 0 3px rgba(91,143,249,0.12); }
+
+    .theme-recept .login-card { border-color: rgba(245,186,0,0.24); box-shadow: var(--shadow-lg), 0 0 30px rgba(245,186,0,0.12); }
+    .theme-recept .btn-primary { background: var(--warning); color: var(--bg-base); }
+    .theme-recept .btn-primary:hover { background: #FFD030; box-shadow: 0 0 20px rgba(245,186,0,0.4); }
+    .theme-recept .form-input:focus { border-color: var(--warning); box-shadow: 0 0 0 3px rgba(245,186,0,0.12); }
+
+    /* Error */
+    .field-error { font-size: 0.72rem; color: var(--error); margin-top: 4px; display: none; }
+    .field-error.show { display: block; }
+    
+    .nav-logo { position: absolute; top: 20px; left: 32px; display: flex; align-items: center; gap: 10px; text-decoration: none; z-index: 10; }
+    .nav-logo-icon { width: 30px; height: 30px; background: linear-gradient(135deg, var(--accent), #0066FF); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 0 12px rgba(0,205,216,0.25); }
+    .nav-logo-text { font-size: 0.95rem; font-weight: 800; color: var(--text-1); }
+
+    .otp-box { width: 44px; height: 50px; text-align: center; font-size: 1.25rem; font-weight: 700; padding: 0; background: var(--bg-card); transition: border-color var(--t-fast); }
+    .otp-box:focus { border-color: var(--accent); }
+
+  </style>
+</head>
+<body>
+
+<div class="login-page theme-doctor" id="login-page">
+  <div class="login-bg-grid"></div>
+  <div class="login-blob login-blob1"></div>
+  <div class="login-blob login-blob2"></div>
+  <div class="login-blob login-blob3"></div>
+
+  <!-- Top nav -->
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">🏥</div>
+    <span class="nav-logo-text">NovaCare</span>
+  </a>
+
+  <div class="login-card animate-in">
+    
+    <!-- Shared Header Element (Grid User Icon) -->
+    <div class="wireframe-logo-container">
+      <div class="user-icon-grid">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <line x1="19" y1="8" x2="19" y2="14" stroke="currentColor"/>
+          <line x1="22" y1="11" x2="16" y2="11" stroke="currentColor"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ═════════════════ LOGIN VIEW ═════════════════ -->
+    <div id="view-login">
+      <h2 class="auth-title">Login to your account</h2>
+      <p class="auth-subtitle">Welcome back, please enter your details</p>
+      
+      <!-- Role Tabs (Preserved for functionality) -->
+      <div class="role-tabs">
+        <button class="role-tab tab-doctor active" onclick="switchRole('doctor')">🩺 Doctor</button>
+        <button class="role-tab tab-admin" onclick="switchRole('admin')">📊 Admin</button>
+        <button class="role-tab tab-recept" onclick="switchRole('recept')">👤 Receptionist</button>
+      </div>
+
+      <form onsubmit="handleLogin(event)" style="display:flex;flex-direction:column;gap:18px;">
+        <div class="form-group">
+          <label class="form-label">Email or Phone<span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <!-- Mail Lucide Icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+            </span>
+            <input class="form-input has-icon" type="text" id="login-email" placeholder="Enter email or phone number" required />
+          </div>
+          <div class="field-error" id="err-email">Please enter a valid email or phone</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password<span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <!-- Lock Lucide Icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </span>
+            <input class="form-input has-icon" type="password" id="login-pass" placeholder="Enter your password" required minlength="6" />
+            <span class="action-icon" onclick="togglePass('login-pass')">
+              <!-- Eye Lucide Icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </span>
+          </div>
+          <div class="field-error" id="err-pass">Password must be at least 6 characters</div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px;">
+          <label class="check-row">
+            <input type="checkbox" checked /> Keep me logged in
+          </label>
+          <a href="javascript:void(0)" class="auth-link" onclick="toggleView('forgot')">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-full" style="margin-top:12px; font-size:1rem; padding:16px;" id="login-btn">
+          Log In
+        </button>
+      </form>
+
+      <!-- Verification notice (doctor only) -->
+      <div id="verify-notice" class="hidden" style="margin-top:14px;padding:12px;background:rgba(245,186,0,0.08);border:1px solid rgba(245,186,0,0.2);border-radius:var(--r-md);font-size:0.78rem;color:var(--warning);">
+        ⚠ Your account is pending document verification. You'll be redirected.
+      </div>
+
+      <div class="bottom-nav">
+        Not registered yet? <a href="register.html">Create an account</a>
+      </div>
+    </div>
+    
+    <!-- ═════════════════ FORGOT PASSWORD VIEW ═════════════════ -->
+    <div id="view-forgot" class="hidden">
+      <h2 class="auth-title">Forgot Password</h2>
+      <p class="auth-subtitle">Don't worry it occurs. Please enter the email address/phone no. linked with your account.</p>
+
+      <form onsubmit="handleForgot(event)" style="display:flex;flex-direction:column;gap:18px;">
+        <div class="form-group">
+          <label class="form-label">Email or Phone<span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+            </span>
+            <input class="form-input has-icon" type="text" id="forgot-email" placeholder="Enter email or phone number" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-full" style="margin-top:12px; font-size:1rem; padding:16px;">
+          Send Code
+        </button>
+      </form>
+
+      <div class="bottom-nav">
+        Back to <a href="javascript:void(0)" onclick="toggleView('login')">Login</a>
+      </div>
+    </div>
+
+    <!-- ═════════════════ OTP VERIFICATION VIEW ═════════════════ -->
+    <div id="view-otp" class="hidden">
+      <h2 class="auth-title">OTP Verification</h2>
+      <p class="auth-subtitle">Enter the verification code we just sent on your email address/ phone number.</p>
+
+      <div style="text-align:center; font-size: 0.9rem; margin-bottom: 24px;">
+        <span style="color:var(--text-3)">OTP sent to:</span> <strong id="otp-display-email" style="color:var(--text-1)"></strong>
+        <div style="margin-top:6px;">
+          <a href="javascript:void(0)" class="auth-link" onclick="toggleView('forgot')" style="font-size:0.85rem;">Change Number / Email</a>
+        </div>
+      </div>
+
+      <form onsubmit="handleVerifyOTP(event)" style="display:flex;flex-direction:column;gap:18px;">
+        <div class="form-group">
+          <label class="form-label">Email OTP<span class="req">*</span></label>
+          <div style="display:flex; gap: 8px; justify-content: space-between;" id="otp-inputs">
+            <input type="text" class="form-input otp-box" maxlength="1" required />
+            <input type="text" class="form-input otp-box" maxlength="1" required />
+            <input type="text" class="form-input otp-box" maxlength="1" required />
+            <input type="text" class="form-input otp-box" maxlength="1" required />
+            <input type="text" class="form-input otp-box" maxlength="1" required />
+            <input type="text" class="form-input otp-box" maxlength="1" required />
+          </div>
+        </div>
+
+        <div style="text-align:center; font-size:0.9rem; color:var(--text-2); margin-top: -6px;">
+          Resend OTP in <strong style="color:var(--text-1)">25s</strong>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-full" style="margin-top:12px; font-size:1rem; padding:16px;">
+          Verify
+        </button>
+      </form>
+
+      <div class="bottom-nav">
+        Back to <a href="javascript:void(0)" onclick="toggleView('login')">Login</a>
+      </div>
+    </div>
+
+    <!-- ═════════════════ NEW PASSWORD VIEW ═════════════════ -->
+    <div id="view-reset" class="hidden">
+      <h2 class="auth-title">Enter New Password</h2>
+      <p class="auth-subtitle" style="max-width:320px; margin-inline:auto;">Your new password must be unique from those previously used.</p>
+
+      <form onsubmit="handleResetPassword(event)" style="display:flex;flex-direction:column;gap:18px;">
+        <div class="form-group">
+          <label class="form-label">New Password<span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </span>
+            <input class="form-input has-icon" type="password" id="reset-pass" placeholder="Create a new password" required minlength="6" />
+            <span class="action-icon" onclick="togglePass('reset-pass')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirm Password<span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </span>
+            <input class="form-input has-icon" type="password" id="reset-pass-confirm" placeholder="Enter your confirm password" required minlength="6" />
+            <span class="action-icon" onclick="togglePass('reset-pass-confirm')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-full" style="margin-top:12px; font-size:1rem; padding:16px;">
+          Reset Password
+        </button>
+      </form>
+
+      <div class="bottom-nav">
+        Back to <a href="javascript:void(0)" onclick="toggleView('login')">Login</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+let currentRole = 'doctor';
+
+const roleConfig = {
+  doctor: {
+    theme: 'theme-doctor',
+    target: 'doctor.html',
+    verifyTarget: 'verification.html'
+  },
+  admin: {
+    theme: 'theme-admin',
+    target: 'admin.html'
+  },
+  recept: {
+    theme: 'theme-recept',
+    target: 'receptionist.html'
+  }
+};
+
+function switchRole(role) {
+  currentRole = role;
+  const cfg = roleConfig[role];
+  const page = document.getElementById('login-page');
+
+  // Theme
+  page.className = `login-page ${cfg.theme}`;
+
+  // Tabs
+  document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab-${role}`).classList.add('active');
+
+  // Verify notice
+  document.getElementById('verify-notice').classList.toggle('hidden', role !== 'doctor');
+}
+
+function toggleView(view) {
+  const views = ['view-login', 'view-forgot', 'view-otp', 'view-reset'];
+  views.forEach(v => document.getElementById(v).classList.add('hidden'));
+  document.getElementById(`view-${view}`).classList.remove('hidden');
+}
+
+function togglePass(id) {
+  const passInput = document.getElementById(id);
+  if (passInput) {
+    passInput.type = passInput.type === 'password' ? 'text' : 'password';
+  }
+}
+
+// OTP Auto Tab
+const otpInputs = document.querySelectorAll('.otp-box');
+otpInputs.forEach((input, index) => {
+  input.addEventListener('input', (e) => {
+    if (e.target.value && index < otpInputs.length - 1) {
+      otpInputs[index + 1].focus();
+    }
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+      otpInputs[index - 1].focus();
+    }
+  });
+});
+
+function handleLogin(e) {
+  e.preventDefault();
+  const val = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+
+  // Basic validation
+  let valid = true;
+  if (!val) {
+    document.getElementById('err-email').classList.add('show');
+    valid = false;
+  } else {
+    document.getElementById('err-email').classList.remove('show');
+  }
+  if (!pass || pass.length < 6) {
+    document.getElementById('err-pass').classList.add('show');
+    valid = false;
+  } else {
+    document.getElementById('err-pass').classList.remove('show');
+  }
+  if (!valid) return;
+
+  const cfg = roleConfig[currentRole];
+
+  // Simulate: if doctor and "unverified" demo
+  if (currentRole === 'doctor' && val.includes('unverified')) {
+    toast('Redirecting to verification…', 'warning');
+    setTimeout(() => window.location.href = cfg.verifyTarget, 800);
+    return;
+  }
+
+  toast('Signing in successfully…', 'success');
+  setTimeout(() => window.location.href = cfg.target, 600);
+}
+
+function handleForgot(e) {
+  e.preventDefault();
+  const val = document.getElementById('forgot-email').value.trim();
+  if(!val) {
+     toast('Please enter a valid email or phone.', 'error');
+     return;
+  }
+  document.getElementById('otp-display-email').textContent = val;
+  toast(`Recovery code sent to ${val}`, 'success');
+  toggleView('otp');
+}
+
+function handleVerifyOTP(e) {
+  e.preventDefault();
+  // check if all boxes have values
+  let isValid = true;
+  document.querySelectorAll('.otp-box').forEach(input => {
+    if(!input.value.trim()) isValid = false;
+  });
+  
+  if(!isValid) {
+    toast('Please enter the full 6-digit OTP', 'error');
+    return;
+  }
+  
+  toast('OTP verified successfully', 'success');
+  toggleView('reset');
+}
+
+function handleResetPassword(e) {
+  e.preventDefault();
+  const pass1 = document.getElementById('reset-pass').value;
+  const pass2 = document.getElementById('reset-pass-confirm').value;
+  
+  if(pass1 !== pass2) {
+    toast('Passwords do not match', 'error');
+    return;
+  }
+  
+  toast('Password reset successful! Please log in.', 'success');
+  setTimeout(() => toggleView('login'), 1500);
+}
+
+function toast(msg, type = 'info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  const icons = { success:'✓', error:'✕', info:'ℹ', warning:'⚠' };
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span>${icons[type]||'ℹ'}</span> ${msg}`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+</body>
+</html>

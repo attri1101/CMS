@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaCare — Add New Clinic</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    .p-layout { display:flex; height:100vh; background:var(--bg-base); overflow:hidden; }
+    .p-sidebar { width:72px; min-width:72px; background:var(--bg-sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:24px; }
+    .sb-ic { width:44px; height:44px; border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; color:var(--text-3); cursor:pointer; transition:.2s; }
+    .sb-ic:hover { background:var(--bg-hover); color:var(--text-2); }
+    .sb-ic.active { background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-border); }
+    
+    .p-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .p-topnav { height:64px; border-bottom:1px solid var(--border); background:rgba(4,9,26,.85); backdrop-filter:blur(16px); display:flex; align-items:center; justify-content:space-between; padding:0 28px; flex-shrink:0; z-index:10; }
+    .p-user-pill { display:flex; align-items:center; gap:10px; padding:6px 14px; border-radius:var(--r-full); background:rgba(255,255,255,.03); border:1px solid var(--border); }
+    
+    .p-banner { background:linear-gradient(90deg,rgba(0,205,216,0.05),rgba(91,143,249,0.05)); border-bottom:1px solid var(--border); padding:16px 28px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .p-banner-pct { width:52px; height:52px; border-radius:50%; background:conic-gradient(var(--accent) calc(var(--pct)*3.6deg), var(--bg-hover) 0); display:flex; align-items:center; justify-content:center; font-size:.85rem; font-weight:800; color:var(--accent); position:relative; flex-shrink:0; box-shadow: 0 0 15px var(--accent-glow); }
+    .p-banner-pct::before { content:''; position:absolute; inset:5px; border-radius:50%; background:var(--bg-base); }
+    .p-banner-pct span { position:relative; z-index:1; }
+
+    .p-tabs { display:flex; align-items:center; gap:2px; padding:0 28px; border-bottom:1px solid var(--border); background:var(--bg-surface); overflow-x:auto; flex-shrink:0; }
+    .p-tab { display:flex; align-items:center; gap:8px; padding:14px 18px; color:var(--text-3); font-size:.82rem; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; transition:.2s; white-space:nowrap; }
+    .p-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+    .p-body { flex:1; display:flex; overflow:hidden; min-height:0; background:var(--bg-base); }
+    .p-form-area { flex:1; padding:32px 40px; overflow-y:auto; scroll-behavior:smooth; display:flex; flex-direction:column; gap:32px; min-height:0; }
+    .p-form-container { max-width:900px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:32px; padding-bottom:40px; }
+    .p-right { width:360px; min-width:360px; border-left:1px solid var(--border); padding:32px 24px; display:flex; flex-direction:column; gap:24px; overflow-y:auto; background:rgba(255,255,255,.01); }
+
+    .pc { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg); position:relative; z-index:1; transition:box-shadow .2s; }
+    .pc-head { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; cursor:pointer; transition:.18s; border-radius:var(--r-lg); }
+    .pc-head:hover { background:var(--bg-hover); }
+    .pc-title { font-size:.95rem; font-weight:700; color:var(--text-1); display:flex; align-items:center; gap:8px; }
+    .pc-body { padding:0 24px 24px; display:flex; flex-direction:column; gap:20px; }
+    .pc-chevron { color:var(--text-3); transition:transform .2s; }
+    .pc-chevron.open { transform:rotate(180deg); }
+
+    .fg2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    #profile-map { height:260px; border-radius:var(--r-md); overflow:hidden; border:1px solid var(--border); }
+    
+    .media-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg); padding:16px; display:flex; flex-direction:column; gap:12px; }
+    .media-card-title { font-size:.78rem; font-weight:700; color:var(--text-2); text-transform:uppercase; letter-spacing:.06em; }
+    .photo-preview { width:100%; aspect-ratio:1; border-radius:var(--r-lg); background:linear-gradient(135deg,var(--bg-hover),#1A2B4C); border:1px dashed var(--border); display:flex; align-items:center; justify-content:center; font-size:2.2rem; font-weight:800; color:var(--text-3); position:relative; overflow:hidden; cursor:pointer; }
+    .photo-preview:hover { border-color:var(--accent); background:var(--accent-dim); color:var(--accent); }
+    .upload-mini { border:2px dashed var(--border); border-radius:var(--r-md); padding:20px; text-align:center; cursor:pointer; transition:.2s; }
+    .upload-mini:hover { border-color:var(--accent); background:var(--accent-dim); }
+
+    .social-row { display:flex; align-items:center; gap:8px; }
+    .social-row .btn-clear { padding:8px 12px; font-size:.72rem; flex-shrink:0; }
+
+    .bio-toolbar { display:flex; flex-wrap:wrap; gap:4px; padding:8px 10px; background:var(--bg-hover); border-radius:var(--r-sm) var(--r-sm) 0 0; border:1px solid var(--border); }
+    .bio-btn { width:28px; height:28px; border-radius:4px; background:none; border:1px solid transparent; color:var(--text-2); cursor:pointer; font-size:.82rem; font-weight:700; transition:.15s; display:flex; align-items:center; justify-content:center; }
+    .bio-btn:hover { background:var(--bg-card); border-color:var(--border); color:var(--text-1); }
+    .bio-area { border-top:none; border-radius:0 0 var(--r-sm) var(--r-sm); }
+
+    .p-save-bar { padding:20px 40px; border-top:1px solid var(--border); background:var(--bg-surface); box-shadow:0 -10px 40px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:space-between; gap:20px; flex-shrink:0; position:relative; z-index:200; }
+
+    .sd-wrap { position:relative; width:100%; }
+    .sd-input-box { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--r-md); padding:8px 12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:42px; cursor:text; transition:.2s; }
+    .sd-input-box:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+    .sd-input { background:transparent; border:none; outline:none; color:var(--text-1); font-size:.85rem; flex:1; min-width:80px; }
+    .sd-list { position:absolute; top:calc(100% + 5px); left:0; width:100%; max-height:200px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow-lg); overflow-y:auto; z-index:1000; display:none; border:1px solid var(--border); }
+    .sd-opt { padding:10px 14px; font-size:.82rem; color:var(--text-2); cursor:pointer; transition:.15s; }
+    .sd-opt:hover { background:var(--bg-hover); color:var(--text-1); }
+    
+    .map-search-wrap { position:absolute; top:12px; left:12px; right:12px; z-index:2000; }
+    .map-search-input { width:100%; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 14px; color:var(--text-1); font-size:.85rem; outline:none; box-shadow:var(--shadow-md); transition:.2s; }
+    .map-search-input:focus { border-color:var(--accent); box-shadow:0 0 15px var(--accent-glow); }
+    .map-search-results { position:absolute; top:calc(100% + 5px); left:0; width:100%; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow-lg); max-height:220px; overflow-y:auto; display:none; border:1px solid var(--border); }
+    .ms-item { padding:12px 14px; font-size:.8rem; color:var(--text-2); cursor:pointer; border-bottom:1px solid var(--border); transition:.15s; }
+    .ms-item:hover { background:var(--bg-hover); color:var(--text-1); padding-left:18px; }
+    
+    .tag-container { display:flex; flex-wrap:wrap; gap:8px; min-height:44px; padding:10px; border:1px solid var(--border); border-radius:var(--r-md); background:var(--bg-input); }
+    .tag { display:inline-flex; align-items:center; gap:6px; background:var(--accent-dim); border:1px solid var(--accent-border); color:var(--accent); padding:4px 10px; border-radius:var(--r-sm); font-size:.78rem; font-weight:600; }
+    .tag button { background:none; border:none; color:var(--accent); cursor:pointer; font-size:.9rem; line-height:1; }
+    
+    .check-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:12px; padding:10px 0; }
+    .check-item { display:flex; align-items:center; gap:10px; font-size:.85rem; color:var(--text-2); cursor:pointer; }
+    .check-item input { width:18px; height:18px; accent-color:var(--accent); }
+  </style>
+</head>
+<body>
+<div class="p-layout">
+  <aside class="p-sidebar">
+    <a href="index.html" style="text-decoration:none;"><div style="width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#0066FF);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 12px rgba(0,205,216,.25);margin-bottom:10px;">🏥</div></a>
+    <div class="sb-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+    <div class="sb-ic active"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <div class="sb-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></div>
+  </aside>
+
+  <div class="p-main">
+    <header class="p-topnav">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="font-size:1.1rem;font-weight:800;color:var(--text-1);">NovaCare</div>
+        <div style="width:1px;height:22px;background:var(--border);"></div>
+        <div style="font-size:.88rem;color:var(--text-2);font-weight:600;">Add New Clinic</div>
+      </div>
+      <div class="p-user-pill">
+        <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0066FF);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;">D</div>
+        <div style="font-size:.82rem;font-weight:700;">Dr. Douly</div>
+      </div>
+    </header>
+
+    <div class="p-banner">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <svg width="20" height="20" fill="none" stroke="var(--info)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        <div>
+          <div style="font-size:.95rem;font-weight:700;color:var(--info);">Clinic Registration</div>
+          <div style="font-size:.78rem;color:var(--text-2);">Provide detailed information about your practice.</div>
+        </div>
+      </div>
+      <div class="p-banner-pct" id="completion-ring" style="--pct:0;"><span id="completion-pct">0%</span></div>
+    </div>
+
+    <nav class="p-tabs">
+      <div class="p-tab active">General Details</div>
+      <div class="p-tab">Specializations</div>
+      <div class="p-tab">Working Hours</div>
+    </nav>
+
+    <div class="p-body">
+      <div class="p-form-area">
+        <div class="p-form-container">
+
+          <!-- Basic Information -->
+          <div class="pc">
+            <div class="pc-head"><span class="pc-title">Basic Information</span></div>
+            <div class="pc-body">
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Clinic Name <span class="req">*</span></label>
+                  <input class="form-input" id="c-name" placeholder="Enter clinic name" oninput="calcCompletion()" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Clinic Type <span class="req">*</span></label>
+                  <select class="form-input" id="c-type" onchange="calcCompletion()">
+                    <option value="">Select Clinic Type</option>
+                    <option>Multispeciality</option>
+                    <option>Single Speciality</option>
+                    <option>Diagnostic Center</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Clinic Description <span class="req">*</span></label>
+                <div class="bio-toolbar">
+                  <button class="bio-btn">B</button><button class="bio-btn">I</button><button class="bio-btn">U</button>
+                  <button class="bio-btn">S</button><button class="bio-btn">↶</button><button class="bio-btn">↷</button>
+                  <button class="bio-btn">≡</button><button class="bio-btn">⋮</button><button class="bio-btn">🔗</button>
+                </div>
+                <textarea class="form-input bio-area" id="c-bio" rows="4" placeholder="Provide detailed information about your clinic..." oninput="updateBioCount()"></textarea>
+                <div style="display:flex;justify-content:flex-end;font-size:.68rem;color:var(--text-3);margin-top:4px;"><span id="bio-count">0</span>/1000 characters</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Address Information -->
+          <div class="pc">
+            <div class="pc-head"><span class="pc-title">Address Information</span></div>
+            <div class="pc-body">
+              <div class="form-group">
+                <label class="form-label">Pin Clinic Location on Map <span class="req">*</span></label>
+                <div style="position:relative;">
+                  <div class="map-search-wrap">
+                    <input class="map-search-input" id="map-search" placeholder="Search location..." autocomplete="off" />
+                    <div class="map-search-results" id="map-search-results"></div>
+                  </div>
+                  <div id="profile-map"></div>
+                </div>
+                <div style="margin-top:10px; padding:10px; background:rgba(245,186,0,0.05); border:1px solid rgba(245,186,0,0.15); border-radius:var(--r-md); display:flex; gap:10px;">
+                  <span style="font-size:16px;">💡</span>
+                  <p style="font-size:.75rem; color:var(--text-2); line-height:1.4;">Tip: Click on the map or drag the marker to set your clinic location. The address fields will auto-fill.</p>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Full Clinic Address <span class="req">*</span></label>
+                <input class="form-input" id="c-address" placeholder="Street Address" oninput="calcCompletion()" />
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Country <span class="req">*</span></label>
+                  <select class="form-input" id="c-country" onchange="calcCompletion()"><option>India</option></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">State/Province <span class="req">*</span></label>
+                  <select class="form-input" id="c-state" onchange="calcCompletion()"><option value="">Choose state</option><option>Delhi</option><option>Maharashtra</option><option>Karnataka</option><option>Haryana</option></select>
+                </div>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">City <span class="req">*</span></label>
+                  <select class="form-input" id="c-city" onchange="calcCompletion()"><option value="">Choose city</option><option>New Delhi</option><option>Mumbai</option><option>Bangalore</option><option>Gurugram</option></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Street / Locality</label>
+                  <input class="form-input" id="c-street" placeholder="Enter street or locality" oninput="calcCompletion()" />
+                </div>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Postal/Zip Code <span class="req">*</span></label>
+                  <input class="form-input" id="c-zip" placeholder="PIN Code" oninput="calcCompletion()" />
+                </div>
+                <div style="display:flex;align-items:center;padding-top:28px;">
+                  <label class="check-item"><input type="checkbox" id="c-primary" /> Add Primary</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="pc">
+            <div class="pc-head"><span class="pc-title">Contact Information</span></div>
+            <div class="pc-body">
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Website</label>
+                  <input class="form-input" id="c-web" placeholder="https://yourclinic.com" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email Address <span class="req">*</span></label>
+                  <input class="form-input" id="c-email" placeholder="Enter your email address" oninput="calcCompletion()" />
+                </div>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Mobile Number <span class="req">*</span></label>
+                  <input class="form-input" id="c-mobile" placeholder="Enter your mobile number" oninput="calcCompletion()" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Landline Number</label>
+                  <input class="form-input" id="c-landline" placeholder="Enter your landline number" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legal Information -->
+          <div class="pc">
+            <div class="pc-head"><span class="pc-title">Legal Information</span></div>
+            <div class="pc-body">
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Business Legal Name</label>
+                  <input class="form-input" id="c-legal" placeholder="Enter your business name" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">GST Number</label>
+                  <input class="form-input" id="c-gst" placeholder="Enter your gst number" />
+                </div>
+              </div>
+              <div class="form-group" style="width:49%;">
+                <label class="form-label">Date of Establishment</label>
+                <input class="form-input" type="date" id="c-doe" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Amenities -->
+          <div class="pc">
+            <div class="pc-head"><span class="pc-title">Amenities</span></div>
+            <div class="pc-body">
+              <div class="tag-container" id="amenities-container"></div>
+              <div style="display:flex;gap:10px;margin-top:10px;">
+                <input class="form-input" id="inp-amenity" placeholder="E.g. Free Wi-Fi, Pharmacy" style="flex:1;" />
+                <button class="btn btn-secondary btn-sm" onclick="addTag('amenities')">+ Add</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Services Offered -->
+          <div class="pc">
+            <div class="pc-head"><span class="pc-title">Services Offered</span></div>
+            <div class="pc-body">
+              <div class="tag-container" id="services-container"></div>
+              <div style="display:flex;gap:10px;margin-top:10px;">
+                <input class="form-input" id="inp-service" placeholder="E.g. Vaccination, X-Ray" style="flex:1;" />
+                <button class="btn btn-secondary btn-sm" onclick="addTag('services')">+ Add</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment -->
+          <div class="pc">
+            <div class="pc-head"><span class="pc-title">Payment</span></div>
+            <div class="pc-body">
+              <label class="form-label">Payment Method Types <span class="req">*</span></label>
+              <div class="check-grid">
+                <label class="check-item"><input type="checkbox" class="pay-check" onchange="calcCompletion()" /> ECS</label>
+                <label class="check-item"><input type="checkbox" class="pay-check" onchange="calcCompletion()" checked /> Cash</label>
+                <label class="check-item"><input type="checkbox" class="pay-check" onchange="calcCompletion()" checked /> Card</label>
+                <label class="check-item"><input type="checkbox" class="pay-check" onchange="calcCompletion()" /> Net Banking</label>
+                <label class="check-item"><input type="checkbox" class="pay-check" onchange="calcCompletion()" /> Cheque</label>
+                <label class="check-item"><input type="checkbox" class="pay-check" onchange="calcCompletion()" /> UPI</label>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <aside class="p-right">
+        <div class="media-card">
+          <div class="media-card-title">Clinic Logo</div>
+          <div class="photo-preview" id="logo-preview" onclick="document.getElementById('file-logo').click()">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11z"/><circle cx="12" cy="13" r="4"/></svg>
+            <button class="photo-remove" id="btn-logo-remove" onclick="event.stopPropagation(); removeMedia('logo')" style="display:none;">🗑 Remove</button>
+          </div>
+          <input type="file" id="file-logo" class="hidden" accept="image/*" onchange="handleMediaUpload(this, 'logo')" />
+          <div style="font-size:.72rem;color:var(--text-3);text-align:center;">JPG, PNG up to 2MB<br/>Recommended: 300×300px</div>
+        </div>
+
+        <div class="media-card">
+          <div class="media-card-title">Cover Image</div>
+          <div class="photo-preview" id="cover-preview" style="aspect-ratio:3/1;" onclick="document.getElementById('file-cover').click()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <button class="photo-remove" id="btn-cover-remove" onclick="event.stopPropagation(); removeMedia('cover')" style="display:none;">🗑 Remove</button>
+          </div>
+          <input type="file" id="file-cover" class="hidden" accept="image/*" onchange="handleMediaUpload(this, 'cover')" />
+          <div style="font-size:.72rem;color:var(--text-3);text-align:center;">Recommended: 1200×400px</div>
+        </div>
+
+        <div class="media-card">
+          <div class="media-card-title">Introduction Video</div>
+          <div class="upload-mini" onclick="document.getElementById('file-video').click()">
+            <input type="file" id="file-video" class="hidden" accept="video/*" onchange="handleVideo(this)" />
+            <svg width="24" height="24" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 6px;display:block;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            <div id="video-name" style="font-size:.78rem;color:var(--text-2);font-weight:600;">Click to upload video</div>
+          </div>
+        </div>
+
+        <div class="media-card">
+          <div class="media-card-title">Social Links</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="social-row">
+              <input class="form-input" id="sl-fb" placeholder="https://facebook.com/yourprofile" style="font-size:.78rem;padding:8px 12px;" />
+              <button class="btn btn-ghost btn-sm btn-clear" onclick="document.getElementById('sl-fb').value=''">Clear</button>
+            </div>
+            <div class="social-row">
+              <input class="form-input" id="sl-li" placeholder="https://linkedin.com/in/yourprofile" style="font-size:.78rem;padding:8px 12px;" />
+              <button class="btn btn-ghost btn-sm btn-clear" onclick="document.getElementById('sl-li').value=''">Clear</button>
+            </div>
+            <div class="social-row">
+              <input class="form-input" id="sl-ig" placeholder="https://instagram.com/yourprofile" style="font-size:.78rem;padding:8px 12px;" />
+              <button class="btn btn-ghost btn-sm btn-clear" onclick="document.getElementById('sl-ig').value=''">Clear</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="p-save-bar">
+      <button class="btn btn-ghost btn-sm" onclick="window.history.back()">Back</button>
+      <button class="btn btn-primary" style="min-width:200px;padding:12px 28px; font-weight:700; box-shadow:0 0 20px var(--accent-glow);" onclick="saveClinic()">Save &amp; Update →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+  // --- MAP LOGIC ---
+  let map, marker, searchTimeout;
+  const mapSearchInp = document.getElementById('map-search');
+  const mapResults = document.getElementById('map-search-results');
+
+  function initMap() {
+    map = L.map('profile-map').setView([28.6139, 77.2090], 12);
+    L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(map);
+    marker = L.marker([28.6139, 77.2090], {draggable:true}).addTo(map);
+    map.on('click', e => { marker.setLatLng(e.latlng); reverseGeocode(e.latlng.lat, e.latlng.lng); });
+    marker.on('dragend', e => { const ll=e.target.getLatLng(); reverseGeocode(ll.lat, ll.lng); });
+  }
+
+  mapSearchInp.oninput = () => {
+    clearTimeout(searchTimeout);
+    const q = mapSearchInp.value.trim();
+    if (q.length < 3) { mapResults.style.display='none'; return; }
+    searchTimeout = setTimeout(() => execMapSearch(q), 400);
+  };
+
+  async function execMapSearch(q) {
+    mapResults.innerHTML = '<div style="padding:10px;font-size:0.8rem;color:var(--text-3);">Searching...</div>';
+    mapResults.style.display = 'block';
+    try {
+      const ep = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&addressdetails=1&countrycodes=in&limit=5`;
+      const r = await fetch(ep);
+      const res = await r.json();
+      if (!res.length) { mapResults.innerHTML = '<div style="padding:10px;font-size:0.8rem;color:var(--text-3);">No results</div>'; return; }
+      mapResults.innerHTML = res.map(item => `
+        <div class="ms-item" onclick="selectMapResult(${item.lat}, ${item.lon}, '${item.display_name.replace(/'/g, "\\'")}')">
+          ${item.display_name}
+        </div>
+      `).join('');
+    } catch(e) { mapResults.style.display='none'; }
+  }
+
+  window.selectMapResult = (lat, lng, name) => {
+    const ll = [lat, lng];
+    map.setView(ll, 16);
+    marker.setLatLng(ll);
+    mapResults.style.display = 'none';
+    mapSearchInp.value = name;
+    reverseGeocode(lat, lng);
+  };
+
+  async function reverseGeocode(lat, lng) {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+      const d = await r.json();
+      const a = d.address || {};
+      document.getElementById('c-address').value = d.display_name || '';
+      document.getElementById('c-zip').value = a.postcode || '';
+      document.getElementById('c-street').value = a.road || a.suburb || '';
+      calcCompletion();
+    } catch(e) {}
+  }
+
+  // --- TAG LOGIC ---
+  const tags = { amenities: [], services: [] };
+  function addTag(type) {
+    const inp = document.getElementById(`inp-${type.slice(0, -3)}`);
+    const val = inp.value.trim();
+    if (!val || tags[type].includes(val)) return;
+    tags[type].push(val);
+    renderTags(type);
+    inp.value = '';
+    calcCompletion();
+  }
+
+  function renderTags(type) {
+    const container = document.getElementById(`${type}-container`);
+    if (!tags[type].length) {
+      container.innerHTML = '<div style="color:var(--text-3); font-size:.8rem;">Nothing selected yet</div>';
+      return;
+    }
+    container.innerHTML = tags[type].map(tag => `
+      <div class="tag">${tag} <button onclick="removeTag('${type}', '${tag}')">×</button></div>
+    `).join('');
+  }
+
+  window.removeTag = (type, val) => {
+    tags[type] = tags[type].filter(t => t !== val);
+    renderTags(type);
+    calcCompletion();
+  };
+
+  // --- MEDIA LOGIC ---
+  function handleMediaUpload(input, type) {
+    if (!input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById(`${type}-preview`);
+      prev.style.backgroundImage = `url(${e.target.result})`;
+      prev.style.backgroundSize = 'cover';
+      prev.style.backgroundPosition = 'center';
+      prev.style.color = 'transparent';
+      prev.querySelector('svg').style.display = 'none';
+      document.getElementById(`btn-${type}-remove`).style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  function removeMedia(type) {
+    const prev = document.getElementById(`${type}-preview`);
+    prev.style.backgroundImage = '';
+    prev.style.color = '';
+    prev.querySelector('svg').style.display = 'block';
+    document.getElementById(`btn-${type}-remove`).style.display = 'none';
+    document.getElementById(`file-${type}`).value = '';
+  }
+
+  function handleVideo(input) {
+    if (input.files[0]) {
+      document.getElementById('video-name').textContent = input.files[0].name;
+    }
+  }
+
+  // --- UI HELPERS ---
+  function updateBioCount() {
+    const len = document.getElementById('c-bio').value.length;
+    document.getElementById('bio-count').textContent = len;
+    calcCompletion();
+  }
+
+  const trackedFields = ['c-name', 'c-type', 'c-bio', 'c-address', 'c-email', 'c-mobile'];
+  function calcCompletion() {
+    const filledFields = trackedFields.filter(id => {
+      const el = document.getElementById(id);
+      return el && el.value.trim();
+    }).length;
+    
+    // Add weights for tags and checkboxes
+    const hasTags = (tags.amenities.length > 0 ? 1 : 0) + (tags.services.length > 0 ? 1 : 0);
+    const hasPay = document.querySelectorAll('.pay-check:checked').length > 0 ? 1 : 0;
+    
+    const pct = Math.round(((filledFields + hasTags + hasPay) / (trackedFields.length + 3)) * 100);
+    document.getElementById('completion-pct').textContent = pct + '%';
+    document.getElementById('completion-ring').style.setProperty('--pct', pct);
+  }
+
+  function saveClinic() {
+    // Basic validation
+    if (!document.getElementById('c-name').value.trim()) {
+      toast('Please enter clinic name', 'info');
+      return;
+    }
+    toast('Clinic registered successfully!', 'success');
+    setTimeout(() => window.location.href='profile.html', 1500);
+  }
+
+  function toast(msg, type = 'info') {
+    const wrap = document.getElementById('toast-wrap');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<span>${type==='success'?'✓':'ℹ'}</span> ${msg}`;
+    wrap.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  document.addEventListener('DOMContentLoaded', initMap);
+</script>
+</body>
+</html>
+</body>
+</html>

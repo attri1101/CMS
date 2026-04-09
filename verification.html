@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaCare — Document Verification</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Verification-only page layout */
+    .dashboard-layout { display: flex; height: 100vh; background: var(--bg-base); overflow: hidden; }
+    
+    /* Left Icon Sidebar */
+    .dashboard-sidebar {
+      width: 72px; min-width: 72px; background: var(--bg-sidebar); 
+      border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 28px;
+    }
+    .sb-icon {
+      width: 44px; height: 44px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center;
+      color: var(--text-3); transition: all 0.2s ease; cursor: pointer;
+    }
+    .sb-icon:hover { background: var(--bg-hover); color: var(--text-2); }
+    .sb-icon.active { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+
+    /* Main Container */
+    .dashboard-content { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+    /* Top Navigation bar */
+    .top-nav {
+      height: 72px; border-bottom: 1px solid var(--border); background: rgba(4,9,26,0.8); backdrop-filter: blur(16px);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 32px; z-index: 10;
+    }
+    .nav-search {
+      background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--r-md);
+      display: flex; align-items: center; padding: 0 16px; width: 340px; height: 42px; gap: 12px;
+    }
+    .nav-search input { background: transparent; border: none; color: var(--text-1); font-size: 0.88rem; width: 100%; outline: none; }
+    
+    /* User Widget from reference */
+    .user-profile-widget { display: flex; align-items: center; gap: 12px; padding: 6px 14px; border-radius: var(--r-full); background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
+    .nav-badge-role { font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: var(--info); color: white; text-transform: uppercase; }
+
+    /* Form Body Grid */
+    .main-body { flex: 1; overflow-y: auto; display: grid; grid-template-columns: 1fr 340px; }
+    .form-scroll-area { padding: 40px; display: flex; flex-direction: column; gap: 32px; max-width: 900px; margin: 0 auto; width: 100%; }
+    .right-sidebar { padding: 40px 32px; background: rgba(255,255,255,0.01); border-left: 1px solid var(--border); display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; }
+
+    /* Sections / Cards */
+    .form-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 28px; box-shadow: var(--shadow-md); position: relative; }
+    .section-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+    .section-icon { width: 44px; height: 44px; border-radius: var(--r-md); background: var(--accent-dim); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .section-title { font-size: 1.15rem; font-weight: 700; color: var(--text-1); margin-bottom: 4px; }
+    .section-desc { font-size: 0.88rem; color: var(--text-3); }
+
+    /* Upload box styling */
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: var(--r-md); padding: 32px 20px; text-align: center;
+      transition: all 0.3s ease; background: var(--bg-input); cursor: pointer; position: relative; overflow: hidden;
+    }
+    .upload-zone:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .upload-zone.active { border-color: var(--success); background: rgba(0,217,126,0.04); }
+    .upload-icon { font-size: 2rem; margin-bottom: 12px; color: var(--text-3); }
+    
+    /* Notification Banner */
+    .alert-banner {
+      background: rgba(245,186,0,0.08); border: 1px solid rgba(245,186,0,0.25); border-radius: var(--r-md);
+      padding: 16px 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+    }
+    .alert-icon { font-size: 22px; color: var(--warning); }
+    .alert-title { font-weight: 700; color: #F5BA00; font-size: 0.95rem; margin-bottom: 2px; }
+    .alert-text { font-size: 0.82rem; color: var(--text-2); opacity: 0.8; }
+
+    /* Grid layout inside cards */
+    .grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+
+    /* Custom Input refinements */
+    .form-group { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+    .form-label { font-size: 0.85rem; font-weight: 600; color: var(--text-2); }
+    .req { color: var(--error); margin-left: 3px; }
+
+    /* Combo Boxes */
+    .combo-wrap { position: relative; }
+    .combo-input-wrap { position: relative; display: flex; align-items: center; }
+    .combo-toggle { position: absolute; right: 12px; color: var(--text-3); cursor: pointer; }
+    .combo-dropdown { 
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #0C1B35; border: 1px solid var(--border-hover); 
+      border-radius: var(--r-md); max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: var(--shadow-lg); backdrop-filter: blur(20px);
+    }
+    .combo-item { padding: 10px 14px; border-radius: var(--r-sm); color: var(--text-2); font-size: 0.88rem; cursor: pointer; transition: 0.2s; }
+    .combo-item:hover { background: var(--bg-hover); color: var(--text-1); }
+
+    /* Status sidebar Card */
+    .status-panel-card {
+      background: var(--bg-card); border-radius: var(--r-xl); border: 1px solid var(--border); padding: 24px; text-align: center;
+      display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow-lg);
+    }
+    .status-badge-lg { display: inline-block; padding: 6px 14px; border-radius: var(--r-full); font-size: 0.72rem; font-weight: 800; background: rgba(255,255,255,0.06); color: var(--text-2); }
+
+    .btn-submit-main { margin-top: auto; filter: drop-shadow(0 0 10px var(--accent-glow)); }
+    
+    /* Animation */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-section { animation: fadeIn 0.4s ease-out forwards; }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-layout">
+  
+  <!-- Sidebar Icons -->
+  <aside class="dashboard-sidebar">
+    <a href="doctor.html" class="sb-icon" title="Dashboard">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+    </a>
+    
+    <a href="profile.html" class="sb-icon" title="Profile">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+    </a>
+    
+    <a href="verification.html" class="sb-icon active" title="Verification">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+    </a>
+    
+    <a href="admin.html" class="sb-icon" title="Settings / Billing">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+    </a>
+  </aside>
+
+  <div class="dashboard-content">
+    
+    <!-- Top Navigation -->
+    <header class="top-nav">
+      <div style="display:flex; align-items:center; gap:16px;">
+         <a href="index.html" style="display:flex; align-items:center; gap:10px; text-decoration:none;">
+           <div style="width:34px; height:34px; background:linear-gradient(135deg,var(--accent),#0066FF); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 0 14px rgba(0,205,216,0.25);">🏥</div>
+           <span style="font-size:1.15rem; font-weight:800; color:var(--text-1); letter-spacing:-0.02em;">NovaCare</span>
+         </a>
+         <div style="width:1px; height:24px; background:var(--border); margin: 0 8px;"></div>
+         <div class="nav-search" style="width:auto; min-width:240px; cursor:pointer;">
+            <span style="font-size:16px;">🏥</span>
+            <select style="background:transparent; border:none; color:var(--text-1); font-size:0.88rem; width:100%; outline:none; font-weight:600; cursor:pointer;">
+               <option>NovaCare Clinic, City Center</option>
+               <option>NovaCare Multispeciality</option>
+               <option>Apollo Diagnostics (Linked)</option>
+            </select>
+         </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:20px;">
+         <div style="color:var(--text-3); font-size:0.85rem; font-weight:600;" id="current-date-nav">Tuesday, April 7, 2026</div>
+         <div style="display:flex; gap:14px;">
+            <div class="sb-icon" style="width:38px; height:38px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
+            <div class="sb-icon" style="width:38px; height:38px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+         </div>
+         <div class="user-profile-widget">
+            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),#0066FF); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; border: 2px solid var(--border);">D</div>
+            <div style="display:flex; flex-direction:column; gap:1px;">
+              <div style="font-size:0.82rem; font-weight:700;">Dr. Douly</div>
+              <div class="nav-badge-role">Doctor</div>
+            </div>
+         </div>
+      </div>
+    </header>
+
+    <main class="main-body">
+      
+      <!-- Center Form Area -->
+      <div class="form-scroll-area">
+        
+        <!-- Alert Banner -->
+        <div class="alert-banner">
+          <div class="alert-icon">⚠️</div>
+          <div>
+            <div class="alert-title">No Documents Uploaded</div>
+            <div class="alert-text">You haven't uploaded any documents yet. Status will update once you submit for review.</div>
+          </div>
+        </div>
+
+        <h1 style="font-size:1.6rem; font-weight:800; margin-bottom: -10px;">Verify Your Documents</h1>
+
+        <!-- IDENTITY VERIFICATION -->
+        <section class="form-section animate-section" style="animation-delay: 0.1s;">
+           <div class="section-header">
+             <div class="section-icon">🪪</div>
+             <div>
+               <h2 class="section-title">Identity Verification</h2>
+               <p class="section-desc">Please provide a government-issued identity proof.</p>
+             </div>
+           </div>
+
+           <div class="grid-row">
+             <div class="form-group">
+               <label class="form-label">Identity Proof Type<span class="req">*</span></label>
+               <div class="input-wrap">
+                 <select class="form-input" id="id-type" required>
+                   <option value="">Select Identity Type</option>
+                   <option>Aadhaar Card</option>
+                   <option>PAN Card</option>
+                   <option>Passport</option>
+                   <option>Voter ID</option>
+                 </select>
+               </div>
+             </div>
+             <div class="form-group">
+               <label class="form-label">Identity Proof Number<span class="req">*</span></label>
+               <input class="form-input" type="text" id="id-number" placeholder="Enter ID Number" required />
+             </div>
+           </div>
+
+           <div class="form-group">
+             <label class="form-label">Upload Identity Proof (Front & Back)<span class="req">*</span></label>
+             <div class="upload-zone" onclick="triggerUpload('file-id')">
+               <input type="file" id="file-id" class="hidden" multiple onchange="handleFile(this, 'zone-id')" />
+               <div class="upload-icon">📁</div>
+               <div style="font-weight:700; color:var(--text-1); margin-bottom:4px;" id="zone-id-text">Click to Upload or drag and drop</div>
+               <button class="btn btn-primary btn-sm" style="margin-top:12px; pointer-events:none;">Browse Files</button>
+             </div>
+           </div>
+        </section>
+
+        <!-- MEDICAL COUNCIL -->
+        <section class="form-section animate-section" style="animation-delay: 0.2s;">
+           <div class="section-header">
+             <div class="section-icon">📜</div>
+             <div>
+               <h2 class="section-title">Medical Council Registration</h2>
+               <p class="section-desc">Details of your medical council registration and license.</p>
+             </div>
+           </div>
+
+           <div class="grid-row">
+             <div class="form-group">
+               <label class="form-label">Registration Number<span class="req">*</span></label>
+               <input class="form-input" type="text" id="reg-number" placeholder="MCI/StateCode-12345" required />
+             </div>
+             <div class="form-group">
+               <label class="form-label">Registration Year<span class="req">*</span></label>
+               <select class="form-input" id="reg-year" required>
+                 <option value="">Select Year</option>
+                 <!-- Populate Years JS -->
+               </select>
+             </div>
+           </div>
+
+           <div class="grid-row">
+             <div class="form-group">
+               <label class="form-label">License Expiry Date<span class="req">*</span></label>
+               <input class="form-input" type="date" id="license-expiry" required />
+             </div>
+             <div class="form-group">
+               <label class="form-label">State Council<span class="req">*</span></label>
+               <div class="input-wrap">
+                 <select class="form-input" id="state-council" required>
+                   <option value="">Select State Council</option>
+                   <option>Delhi Medical Council</option>
+                   <option>Maharashtra Medical Council</option>
+                   <option>Karnataka Medical Council</option>
+                   <option>Tamil Nadu Medical Council</option>
+                   <option>MCI - Medical Council of India</option>
+                 </select>
+               </div>
+             </div>
+           </div>
+
+           <div class="form-group">
+             <label class="form-label">Medical Registration Certificate<span class="req">*</span></label>
+             <div class="upload-zone" onclick="triggerUpload('file-reg')">
+               <input type="file" id="file-reg" class="hidden" onchange="handleFile(this, 'zone-reg')" />
+               <div class="upload-icon">📄</div>
+               <div style="font-weight:700; color:var(--text-1); margin-bottom:4px;" id="zone-reg-text">Click to Upload or drag and drop</div>
+               <button class="btn btn-primary btn-sm" style="margin-top:12px; pointer-events:none;">Browse Files</button>
+             </div>
+           </div>
+        </section>
+
+        <!-- QUALIFICATIONS -->
+        <section class="form-section animate-section" style="animation-delay: 0.3s;">
+           <div class="section-header">
+             <div class="section-icon">🎓</div>
+             <div>
+               <h2 class="section-title">Qualifications & Specializations</h2>
+               <p class="section-desc">Your highest educational achievements and focus areas.</p>
+             </div>
+           </div>
+
+           <div class="grid-row">
+             <div class="form-group">
+               <label class="form-label">Highest Medical Degree<span class="req">*</span></label>
+               <div class="combo-wrap">
+                 <div class="combo-input-wrap">
+                   <input class="form-input" id="degree-input" placeholder="Search degree..." onfocus="toggleCombo('degree-list', true)" oninput="filterCombo('degree-list', this.value)" />
+                   <span class="combo-toggle" onclick="toggleCombo('degree-list')">▼</span>
+                 </div>
+                 <div class="combo-dropdown hidden" id="degree-list">
+                    <div class="combo-item" onclick="selectCombo('degree-input', 'MBBS', 'degree-list')">MBBS</div>
+                    <div class="combo-item" onclick="selectCombo('degree-input', 'MD (Doctor of Medicine)', 'degree-list')">MD (Doctor of Medicine)</div>
+                    <div class="combo-item" onclick="selectCombo('degree-input', 'MS (Master of Surgery)', 'degree-list')">MS (Master of Surgery)</div>
+                    <div class="combo-item" onclick="selectCombo('degree-input', 'BDS', 'degree-list')">BDS</div>
+                    <div class="combo-item" onclick="selectCombo('degree-input', 'MDS', 'degree-list')">MDS</div>
+                 </div>
+               </div>
+             </div>
+             <div class="form-group">
+               <label class="form-label">Specialization<span class="req">*</span></label>
+               <div class="combo-wrap">
+                 <div class="combo-input-wrap">
+                   <input class="form-input" id="spec-input" placeholder="Search specialization..." onfocus="toggleCombo('spec-list', true)" oninput="filterCombo('spec-list', this.value)" />
+                   <span class="combo-toggle" onclick="toggleCombo('spec-list')">▼</span>
+                 </div>
+                 <div class="combo-dropdown hidden" id="spec-list">
+                    <div class="combo-item" onclick="selectCombo('spec-input', 'Cardiology', 'spec-list')">Cardiology</div>
+                    <div class="combo-item" onclick="selectCombo('spec-input', 'Dermatology', 'spec-list')">Dermatology</div>
+                    <div class="combo-item" onclick="selectCombo('spec-input', 'Neurology', 'spec-list')">Neurology</div>
+                    <div class="combo-item" onclick="selectCombo('spec-input', 'Orthopedics', 'spec-list')">Orthopedics</div>
+                    <div class="combo-item" onclick="selectCombo('spec-input', 'Pediatrics', 'spec-list')">Pediatrics</div>
+                 </div>
+               </div>
+             </div>
+           </div>
+
+           <div class="form-group">
+             <label class="form-label">Degree Certificates<span class="req">*</span></label>
+             <div class="upload-zone" onclick="triggerUpload('file-cert')">
+               <input type="file" id="file-cert" class="hidden" multiple onchange="handleFile(this, 'zone-cert')" />
+               <div class="upload-icon">🎓</div>
+               <div style="font-weight:700; color:var(--text-1); margin-bottom:4px;" id="zone-cert-text">Click to Upload or drag and drop</div>
+               <button class="btn btn-primary btn-sm" style="margin-top:12px; pointer-events:none;">Browse Files</button>
+             </div>
+           </div>
+
+           <div style="display:flex; justify-content:flex-end; margin-top:32px;">
+              <button class="btn btn-primary btn-lg btn-submit-main" style="width:240px; padding: 18px;" onclick="submitVerification()">Submit Documents</button>
+           </div>
+        </section>
+
+      </div>
+
+      <!-- Right Sidebar Status -->
+      <aside class="right-sidebar">
+        <div class="status-panel-card">
+           <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:4px;">Verification Status</h3>
+           <div class="status-badge-lg" id="status-badge">NO DOCUMENTS FOUND</div>
+           <div style="font-size:0.86rem; color:var(--text-3); line-height:1.5;">Please upload your documents to start the verification process. Usually reviewed in 24h.</div>
+        </div>
+        
+        <div style="background:var(--bg-card); border-radius:var(--r-lg); border:1px solid var(--border); padding:20px;">
+           <div style="font-size:0.75rem; font-weight:700; color:var(--info); text-transform:uppercase; margin-bottom:12px;">Verification Tips</div>
+           <ul style="list-style:none; display:flex; flex-direction:column; gap:10px; font-size:0.8rem; color:var(--text-2);">
+             <li>• Ensure ID proof is clear and readable.</li>
+             <li>• Registration year must match MCI cert.</li>
+             <li>• Expiry date must be in the future.</li>
+             <li>• Max file size is 5MB per document.</li>
+           </ul>
+        </div>
+      </aside>
+
+    </main>
+
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// Date Handling
+document.getElementById('current-date-nav').textContent = new Date().toLocaleDateString('en-US', {
+  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+});
+
+// Populate Year Dropdown
+const yearSelect = document.getElementById('reg-year');
+const currentYear = new Date().getFullYear();
+for(let y = currentYear; y >= 1970; y--) {
+  let opt = document.createElement('option');
+  opt.value = y;
+  opt.textContent = y;
+  yearSelect.appendChild(opt);
+}
+
+// Upload Logic
+function triggerUpload(id) { document.getElementById(id).click(); }
+function handleFile(input, zoneId) {
+  if(input.files && input.files.length > 0) {
+    const zoneText = document.getElementById(zoneId + '-text');
+    zoneText.textContent = `${input.files.length} file(s) selected: ${input.files[0].name}`;
+    input.parentElement.classList.add('active');
+    toast(`Document attached successfully!`, 'success');
+  }
+}
+
+// Combo Logic
+function toggleCombo(id, forceOpen) {
+  const el = document.getElementById(id);
+  if(forceOpen) el.classList.remove('hidden');
+  else el.classList.toggle('hidden');
+}
+
+function selectCombo(inputId, val, listId) {
+  document.getElementById(inputId).value = val;
+  document.getElementById(listId).classList.add('hidden');
+}
+
+function filterCombo(listId, query) {
+  const list = document.getElementById(listId);
+  const items = list.querySelectorAll('.combo-item');
+  list.classList.remove('hidden');
+  items.forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(query.toLowerCase()) ? 'block' : 'none';
+  });
+}
+
+function submitVerification() {
+  toast('Verification documents submitted for review!', 'success');
+  const badge = document.getElementById('status-badge');
+  badge.textContent = 'UNDER REVIEW';
+  badge.style.background = 'rgba(245,186,0,0.15)';
+  badge.style.color = 'var(--warning)';
+}
+
+function toast(msg, type = 'info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  const icons = { success:'✓', error:'✕', info:'ℹ', warning:'⚠' };
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span>${icons[type]||'ℹ'}</span> ${msg}`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// Close combos on outside click
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.combo-wrap')) {
+    document.querySelectorAll('.combo-dropdown').forEach(d => d.classList.add('hidden'));
+  }
+});
+</script>
+
+</body>
+</html>

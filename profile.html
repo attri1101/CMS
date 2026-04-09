@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaCare — Complete Your Profile</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    .p-layout { display:flex; height:100vh; background:var(--bg-base); overflow:hidden; }
+    /* Icon Sidebar */
+    .p-sidebar { width:72px; min-width:72px; background:var(--bg-sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:24px; }
+    .sb-ic { width:44px; height:44px; border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; color:var(--text-3); cursor:pointer; transition:.2s; }
+    .sb-ic:hover { background:var(--bg-hover); color:var(--text-2); }
+    .sb-ic.active { background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-border); }
+    /* Main */
+    .p-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    /* Top Nav */
+    .p-topnav { height:64px; border-bottom:1px solid var(--border); background:rgba(4,9,26,.85); backdrop-filter:blur(16px); display:flex; align-items:center; justify-content:space-between; padding:0 28px; flex-shrink:0; z-index:10; }
+    .p-clinic-sel { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--r-md); display:flex; align-items:center; padding:0 14px; height:40px; gap:10px; min-width:220px; }
+    .p-clinic-sel select { background:transparent; border:none; color:var(--text-1); font-size:.88rem; font-weight:600; outline:none; cursor:pointer; width:100%; }
+    .p-user-pill { display:flex; align-items:center; gap:10px; padding:6px 14px; border-radius:var(--r-full); background:rgba(255,255,255,.03); border:1px solid var(--border); }
+    /* Completion Banner */
+    .p-banner { background:linear-gradient(90deg,rgba(0,205,216,0.05),rgba(91,143,249,0.05)); border-bottom:1px solid var(--border); padding:16px 28px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .p-banner-pct { width:52px; height:52px; border-radius:50%; background:conic-gradient(var(--accent) calc(var(--pct)*3.6deg), var(--bg-hover) 0); display:flex; align-items:center; justify-content:center; font-size:.85rem; font-weight:800; color:var(--accent); position:relative; flex-shrink:0; box-shadow: 0 0 15px var(--accent-glow); }
+    .p-banner-pct::before { content:''; position:absolute; inset:5px; border-radius:50%; background:var(--bg-base); }
+    .p-banner-pct span { position:relative; z-index:1; }
+    /* Horizontal Tabs */
+    .p-tabs { display:flex; align-items:center; gap:2px; padding:0 28px; border-bottom:1px solid var(--border); background:var(--bg-surface); overflow-x:auto; flex-shrink:0; }
+    .p-tabs::-webkit-scrollbar { height:2px; }
+    .p-tab { display:flex; align-items:center; gap:8px; padding:14px 18px; color:var(--text-3); font-size:.82rem; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; transition:.2s; white-space:nowrap; }
+    .p-tab:hover { color:var(--text-2); }
+    .p-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .p-tab svg { opacity:.6; }
+    .p-tab.active svg { opacity:1; }
+    /* Body */
+    .p-body { flex:1; display:flex; overflow:hidden; min-height:0; background:var(--bg-base); }
+    /* Form Area */
+    .p-form-area { flex:1; padding:32px 40px; overflow-y:auto; scroll-behavior:smooth; display:flex; flex-direction:column; gap:32px; min-height:0; }
+    .p-form-container { max-width:900px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:32px; padding-bottom:40px; }
+    /* Right Sidebar */
+    .p-right { width:360px; min-width:360px; border-left:1px solid var(--border); padding:32px 24px; display:flex; flex-direction:column; gap:24px; overflow-y:auto; background:rgba(255,255,255,.01); }
+    /* Collapsible card */
+    .pc { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg); position:relative; z-index:1; transition:box-shadow .2s; }
+    .pc:focus-within { box-shadow:0 10px 30px rgba(0,0,0,.3); z-index:2; }
+    .pc-head { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; cursor:pointer; transition:.18s; border-radius:var(--r-lg); }
+    .pc-head:hover { background:var(--bg-hover); }
+    .pc-title { font-size:.95rem; font-weight:700; color:var(--text-1); display:flex; align-items:center; gap:8px; }
+    .pc-body { padding:0 24px 24px; display:flex; flex-direction:column; gap:20px; }
+    .pc-chevron { color:var(--text-3); transition:transform .2s; }
+    .pc-chevron.open { transform:rotate(180deg); }
+    /* 2-col grid */
+    .fg2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    /* Map */
+    #profile-map { height:220px; border-radius:var(--r-md); overflow:hidden; border:1px solid var(--border); }
+    /* Media card */
+    .media-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg); padding:16px; display:flex; flex-direction:column; gap:12px; }
+    .media-card-title { font-size:.78rem; font-weight:700; color:var(--text-2); text-transform:uppercase; letter-spacing:.06em; }
+    .photo-preview { width:100%; aspect-ratio:1; border-radius:var(--r-lg); background:linear-gradient(135deg,var(--accent),#0066FF); display:flex; align-items:center; justify-content:center; font-size:2.5rem; font-weight:800; color:white; position:relative; overflow:hidden; }
+    .photo-remove { position:absolute; bottom:8px; right:8px; background:rgba(255,77,106,.85); border:none; border-radius:var(--r-sm); color:white; font-size:.72rem; padding:4px 10px; cursor:pointer; font-weight:700; }
+    .upload-mini { border:2px dashed var(--border); border-radius:var(--r-md); padding:20px; text-align:center; cursor:pointer; transition:.2s; }
+    .upload-mini:hover { border-color:var(--accent); background:var(--accent-dim); }
+    /* Social row */
+    .social-row { display:flex; align-items:center; gap:8px; }
+    .social-row input { flex:1; }
+    .social-row .btn-clear { padding:8px 12px; font-size:.72rem; flex-shrink:0; }
+    /* Lang pills */
+    .lang-pill { display:inline-flex; align-items:center; gap:5px; background:var(--accent-dim); border:1px solid var(--accent-border); border-radius:var(--r-full); padding:4px 10px; font-size:.78rem; font-weight:600; color:var(--accent); margin:3px; }
+    .lang-pill button { background:none; border:none; color:var(--accent); cursor:pointer; font-size:.9rem; line-height:1; padding:0 2px; }
+    /* Bio toolbar */
+    .bio-toolbar { display:flex; gap:4px; padding:8px 10px; background:var(--bg-hover); border-radius:var(--r-sm) var(--r-sm) 0 0; border:1px solid var(--border); }
+    .bio-btn { width:28px; height:28px; border-radius:4px; background:none; border:1px solid transparent; color:var(--text-2); cursor:pointer; font-size:.82rem; font-weight:700; transition:.15s; display:flex; align-items:center; justify-content:center; }
+    .bio-btn:hover { background:var(--bg-card); border-color:var(--border); color:var(--text-1); }
+    .bio-area { border-top:none; border-radius:0 0 var(--r-sm) var(--r-sm); }
+    /* Tab panels */
+    .tab-panel { display:none; flex:1; overflow:hidden; min-height:0; }
+    .tab-panel.active { display:flex; }
+    /* Save bar */
+    .p-save-bar { padding:20px 40px; border-top:1px solid var(--border); background:var(--bg-surface); box-shadow:0 -10px 40px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:space-between; gap:20px; flex-shrink:0; position:relative; z-index:200; }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .pc { animation:fadeInUp .25s ease forwards; }
+
+    /* Searchable Dropdown UI */
+    .sd-wrap { position:relative; width:100%; }
+    .sd-input-box { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--r-md); padding:8px 12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:42px; cursor:text; transition:.2s; }
+    .sd-input-box:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+    .sd-input { background:transparent; border:none; outline:none; color:var(--text-1); font-size:.85rem; flex:1; min-width:80px; }
+    .sd-list { position:absolute; top:calc(100% + 5px); left:0; width:100%; max-height:200px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow-lg); overflow-y:auto; z-index:1000; display:none; }
+    .sd-opt { padding:10px 14px; font-size:.82rem; color:var(--text-2); cursor:pointer; transition:.15s; }
+    .sd-opt:hover { background:var(--bg-hover); color:var(--text-1); }
+    .sd-opt.selected { background:var(--accent-dim); color:var(--accent); }
+    
+    /* Map Search Overlay */
+    .map-search-wrap { position:absolute; top:12px; left:12px; right:12px; z-index:2000; }
+    .map-search-input { width:100%; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 14px; color:var(--text-1); font-size:.85rem; outline:none; box-shadow:var(--shadow-md); transition:.2s; }
+    .map-search-input:focus { border-color:var(--accent); box-shadow:0 0 15px var(--accent-glow); }
+    .map-search-results { position:absolute; top:calc(100% + 5px); left:0; width:100%; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow-lg); max-height:220px; overflow-y:auto; display:none; border:1px solid var(--border); }
+    .ms-item { padding:12px 14px; font-size:.8rem; color:var(--text-2); cursor:pointer; border-bottom:1px solid var(--border); transition:.15s; }
+    .ms-item:hover { background:var(--bg-hover); color:var(--text-1); padding-left:18px; }
+
+    /* Tags & Form Grids */
+    .tag-container { display:flex; flex-wrap:wrap; gap:8px; min-height:44px; padding:10px; border:1px solid var(--border); border-radius:var(--r-md); background:var(--bg-input); }
+    .tag { display:inline-flex; align-items:center; gap:6px; background:var(--accent-dim); border:1px solid var(--accent-border); color:var(--accent); padding:4px 10px; border-radius:var(--r-sm); font-size:.78rem; font-weight:600; }
+    .tag button { background:none; border:none; color:var(--accent); cursor:pointer; font-size:.9rem; line-height:1; }
+
+    .check-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:12px; padding:10px 0; }
+    .check-item { display:flex; align-items:center; gap:10px; font-size:.85rem; color:var(--text-2); cursor:pointer; }
+    .check-item input { width:18px; height:18px; accent-color:var(--accent); }
+
+    .clinic-logo-preview { width:100px; height:100px; border-radius:var(--r-md); background:var(--bg-hover); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; }
+    .ms-loading { padding:12px; text-align:center; font-size:.78rem; color:var(--text-3); }
+    
+    /* Clinic Cards */
+    .clinic-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg); padding:20px; transition:.2s; display:flex; gap:16px; position:relative; }
+    .clinic-card:hover { border-color:var(--accent-border); box-shadow:0 8px 30px rgba(0,0,0,.3); }
+    .clinic-logo { width:52px; height:52px; border-radius:var(--r-md); background:var(--bg-hover); display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; border:1px solid var(--border); }
+    .clinic-badge { font-size:.62rem; font-weight:800; padding:2px 8px; border-radius:4px; text-transform:uppercase; }
+    .badge-primary { background:var(--success); color:#fff; }
+    .badge-owner { background:var(--info); color:#fff; }
+    .clinic-info { flex:1; }
+    .clinic-name { font-size:1rem; font-weight:700; color:var(--text-1); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    .clinic-detail-row { display:flex; align-items:center; gap:10px; font-size:.8rem; color:var(--text-2); margin-top:6px; }
+    .clinic-detail-row svg { opacity:.6; }
+    .btn-edit { background:none; border:1px solid var(--border); color:var(--text-2); font-size:.78rem; font-weight:600; padding:4px 12px; border-radius:6px; cursor:pointer; margin-top:14px; display:inline-flex; align-items:center; gap:6px; transition:.2s; }
+    .btn-edit:hover { border-color:var(--accent); color:var(--text-1); background:var(--accent-dim); }
+
+    .btn-edit:hover { border-color:var(--accent); color:var(--text-1); background:var(--accent-dim); }
+
+    /* Footer Hiding Logic */
+    body[data-active-tab="availability"] #main-save-bar {
+      display: none !important;
+    }
+    
+    .p-layout.sm-form-active #main-save-bar { display: none !important; }
+    .p-layout.clinic-form-active #main-save-bar { display: none !important; }
+
+    /* --- SCHEDULE MANAGER (Availability) --- */
+    .sm-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+    .sm-title { font-size:1.24rem; font-weight:700; color:var(--text-1); }
+    .sm-actions { display:flex; gap:12px; }
+    
+    .btn-add-schedule { background:var(--accent); color:var(--bg); padding:10px 24px; border-radius:var(--r-md); font-weight:700; border:none; cursor:pointer; display:flex; align-items:center; gap:10px; transition:.2s; box-shadow:0 0 15px var(--accent-glow); }
+    .btn-add-schedule:hover { transform:translateY(-2px); box-shadow:0 0 25px var(--accent-glow); opacity:.9; }
+    
+    .btn-sm-orange { width:44px; height:44px; border-radius:var(--r-md); border:1px solid #FF6B0044; background:#FF6B0011; color:#FF6B00; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.2s; }
+    .btn-sm-orange:hover { background:#FF6B0022; transform:translateY(-2px); }
+
+    .sm-filters { display:grid; grid-template-columns:1fr 1fr; gap:20px; background:var(--bg-sidebar); padding:16px; border-radius:var(--r-lg); border:1px solid var(--border); margin-bottom:24px; }
+    .sm-filter-item label { display:block; font-size:.65rem; font-weight:800; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; letter-spacing:.05em; }
+    .sm-filter-input { width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 14px; color:var(--text-1); font-size:.88rem; display:flex; align-items:center; justify-content:space-between; }
+
+    .sched-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+    .sched-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-xl); padding:20px; transition:.2s; border-left:4px solid var(--accent); }
+    .sched-card:hover { border-color:var(--accent-border); transform:translateX(4px); }
+    .sched-card-top { display:flex; justify-content:space-between; margin-bottom:12px; }
+    .sched-time { font-size:1.1rem; font-weight:700; color:var(--text-1); }
+    .sched-services { font-size:.82rem; color:var(--text-2); margin-bottom:16px; display:flex; align-items:center; gap:6px; opacity:.8; }
+    
+    .day-picker { display:flex; gap:8px; flex-wrap:wrap; }
+    .day-circle { width:34px; height:34px; border-radius:50%; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:600; color:var(--text-2); cursor:pointer; transition:.2s; }
+    .day-circle.active { background:var(--accent); border-color:var(--accent); color:var(--bg); box-shadow:0 0 10px var(--accent-glow); }
+    .day-circle:hover:not(.active) { border-color:var(--accent); color:var(--accent); }
+
+    .sched-meta { border-top:1px dashed var(--border); margin-top:18px; padding-top:14px; display:flex; align-items:center; gap:12px; font-size:.78rem; color:var(--text-3); }
+
+    /* Form Specifics */
+    .sm-form-box { background:var(--bg-sidebar); border:1px solid var(--border); border-radius:var(--r-xl); padding:30px; margin-top:20px; position:relative; animation:slideIn .3s ease-out; }
+    @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    
+    .sm-form-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+    .sm-form-title { font-size:1rem; font-weight:700; text-transform:uppercase; color:var(--accent); letter-spacing:.05em; }
+    
+    .sm-row { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+    .sm-field label { display:block; font-size:.65rem; font-weight:800; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; }
+    
+    .sm-toggle-group { display:inline-flex; background:var(--bg-input); padding:4px; border-radius:var(--r-md); border:1px solid var(--border); }
+    .sm-toggle-btn { padding:6px 16px; border-radius:calc(var(--r-md) - 2px); font-size:.75rem; font-weight:700; color:var(--text-3); cursor:pointer; transition:.2s; border:none; background:none; }
+    .sm-toggle-btn.active { background:var(--accent); color:var(--bg); }
+    
+    .sm-service-select { position:relative; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--r-md); padding:12px; color:var(--text-1); cursor:pointer; min-height:48px; }
+    
+    .btn-save-sched { width:100%; padding:14px; background:var(--accent); color:var(--bg); border:none; border-radius:var(--r-md); font-weight:700; font-size:.95rem; cursor:pointer; transition:.2s; margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .btn-save-sched:hover { opacity:.9; transform:translateY(-2px); }
+    .btn-save-sched.disabled { opacity:.4; cursor:not-allowed; background:var(--text-3); }
+
+    /* Footer Toggle Logic for SM */
+    .p-layout.sm-form-active #main-save-bar { display: none !important; }
+  </style>
+</head>
+<body>
+<div class="p-layout">
+
+  <!-- Icon Sidebar -->
+  <aside class="p-sidebar">
+    <a href="index.html" style="text-decoration:none;"><div style="width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#0066FF);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 12px rgba(0,205,216,.25);margin-bottom:10px;">🏥</div></a>
+    
+    <a href="doctor.html" class="sb-ic" title="Dashboard">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </a>
+    
+    <a href="profile.html" class="sb-ic active" title="Profile">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </a>
+    
+    <a href="verification.html" class="sb-ic" title="Verification">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+    </a>
+    
+    <a href="admin.html" class="sb-ic" title="Settings / Billing">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    </a>
+  </aside>
+
+  <div class="p-main">
+
+    <!-- Top Nav -->
+    <header class="p-topnav">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <a href="index.html" style="text-decoration:none;font-size:1.1rem;font-weight:800;color:var(--text-1);letter-spacing:-.02em;">NovaCare</a>
+        <div style="width:1px;height:22px;background:var(--border);"></div>
+        <div class="p-clinic-sel">
+          <span>🏥</span>
+          <select>
+            <option>Jivo Care</option>
+            <option>NovaCare City Center</option>
+            <option>NovaCare Multispeciality</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="font-size:.82rem;color:var(--text-3);font-weight:600;" id="nav-date"></div>
+        <div class="sb-ic" style="width:36px;height:36px;"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+        <div class="p-user-pill">
+          <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0066FF);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;">D</div>
+          <div><div style="font-size:.82rem;font-weight:700;">Dr. Douly</div></div>
+          <span style="font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:4px;background:var(--info);color:#fff;">DOCTOR</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Completion Banner -->
+    <div class="p-banner">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <svg width="20" height="20" fill="none" stroke="var(--info)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        <div>
+          <div style="font-size:.95rem;font-weight:700;color:var(--info);">Complete Your Profile</div>
+          <div style="font-size:.78rem;color:var(--text-2);">Fill out your profile information to get listed on NovaCare.</div>
+        </div>
+      </div>
+      <div class="p-banner-pct" style="--pct:23;" id="completion-ring">
+        <span id="completion-pct">23%</span>
+      </div>
+    </div>
+
+    <!-- Horizontal Tabs -->
+    <nav class="p-tabs" id="tab-nav">
+      <div class="p-tab active" data-tab="personal" onclick="switchTab('personal')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Basic Details
+      </div>
+      <div class="p-tab" data-tab="clinic" onclick="switchTab('clinic')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Clinic
+      </div>
+      <div class="p-tab" data-tab="availability" onclick="switchTab('availability')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Availability
+      </div>
+      <div class="p-tab" data-tab="experience" onclick="switchTab('experience')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        Work Experience
+      </div>
+      <div class="p-tab" data-tab="qualifications" onclick="switchTab('qualifications')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+        Qualifications
+      </div>
+      <div class="p-tab" data-tab="services" onclick="switchTab('services')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Services &amp; Procedures
+      </div>
+      <div class="p-tab" data-tab="awards" onclick="switchTab('awards')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+        Awards &amp; Memberships
+      </div>
+    </nav>
+
+    <!-- Body (Form + Right Sidebar) -->
+    <div class="p-body">
+
+      <!-- LEFT FORM -->
+      <div id="panel-personal" class="tab-panel active">
+        <div class="p-form-area">
+          <div class="p-form-container">
+
+            <!-- Basic Details -->
+          <div class="pc" id="card-personal">
+            <div class="pc-head" onclick="toggleCard('personal')">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <svg width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span class="pc-title">Basic Details</span>
+              </div>
+              <svg class="pc-chevron open" id="chev-personal" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+            </div>
+            <div class="pc-body" id="body-personal">
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">First Name <span class="req">*</span></label>
+                  <input class="form-input" id="p-fname" placeholder="Douly" oninput="calcCompletion()" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last Name <span class="req">*</span></label>
+                  <input class="form-input" id="p-lname" placeholder="Sharma" oninput="calcCompletion()" />
+                </div>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Gender <span class="req">*</span></label>
+                  <select class="form-input" id="p-gender">
+                    <option value="">Select gender</option>
+                    <option>Male</option><option>Female</option><option>Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Marital Status</label>
+                  <select class="form-input" id="p-marital">
+                    <option value="">Select marital status</option>
+                    <option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Date of Birth <span class="req">*</span></label>
+                  <input class="form-input" type="date" id="p-dob" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Blood Group</label>
+                  <select class="form-input" id="p-blood">
+                    <option value="">Select blood group</option>
+                    <option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Nationality <span class="req">*</span></label>
+                  <select class="form-input" id="p-nationality">
+                    <option>India</option><option>USA</option><option>UK</option><option>Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Languages Known <span class="req">*</span></label>
+                  <div class="sd-wrap" id="sd-languages">
+                    <div class="sd-input-box" onclick="this.querySelector('.sd-input').focus()">
+                      <div id="pills-languages" style="display:contents;"></div>
+                      <input class="sd-input" id="inp-languages" placeholder="Search languages…" autocomplete="off" />
+                    </div>
+                    <div class="sd-list" id="list-languages"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="pc" id="card-contact">
+            <div class="pc-head" onclick="toggleCard('contact')">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <svg width="18" height="18" fill="none" stroke="var(--info)" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.5 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.32 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z"/></svg>
+                <span class="pc-title">Contact Information</span>
+              </div>
+              <svg class="pc-chevron open" id="chev-contact" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+            </div>
+            <div class="pc-body" id="body-contact">
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Work Email <span class="req">*</span></label>
+                  <input class="form-input" type="email" id="p-email" placeholder="Enter work email" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Work Phone <span class="req">*</span></label>
+                  <input class="form-input" type="tel" id="p-phone" placeholder="Enter work phone" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Emergency Phone</label>
+                <input class="form-input" type="tel" id="p-emergency" placeholder="Enter emergency phone" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Pin Location on Map <span style="font-size:.75rem;color:var(--text-3);font-weight:400;">(click map or drag marker)</span></label>
+                <div id="profile-map-wrap" style="position:relative;">
+                <div class="map-search-wrap">
+                  <input type="text" class="map-search-input" id="map-search" placeholder="Search location (e.g. MG Road, Bengaluru)…" autocomplete="off" />
+                  <div class="map-search-results" id="map-search-results"></div>
+                </div>
+                <div id="profile-map"></div>
+              </div>
+                <div style="font-size:.72rem;color:var(--warning);margin-top:6px;display:flex;align-items:center;gap:6px;">
+                  <span>💡</span> Tip: Click on the map or drag the marker to set your location. The address, state, city and postal code will auto-fill.
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Full Address <span class="req">*</span></label>
+                <textarea class="form-input" id="p-address" rows="2" placeholder="Enter full address"></textarea>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Country <span class="req">*</span></label>
+                  <select class="form-input" id="p-country"><option>India</option><option>USA</option><option>UK</option></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">State <span class="req">*</span></label>
+                  <input class="form-input" id="p-state" placeholder="Select your state" />
+                </div>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">City</label>
+                  <input class="form-input" id="p-city" placeholder="Select your city" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Street / Locality</label>
+                  <input class="form-input" id="p-street" placeholder="Enter street or locality" />
+                </div>
+              </div>
+              <div class="form-group" style="max-width:240px;">
+                <label class="form-label">Pincode <span class="req">*</span></label>
+                <input class="form-input" id="p-zip" placeholder="Enter pin code" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Professional Details -->
+          <div class="pc" id="card-professional">
+            <div class="pc-head" onclick="toggleCard('professional')">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <svg width="18" height="18" fill="none" stroke="var(--success)" stroke-width="2" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                <span class="pc-title">Professional Details</span>
+              </div>
+              <svg class="pc-chevron open" id="chev-professional" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+            </div>
+            <div class="pc-body" id="body-professional">
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Speciality <span class="req">*</span></label>
+                  <div class="sd-wrap" id="sd-speciality">
+                    <div class="sd-input-box" onclick="this.querySelector('.sd-input').focus()">
+                      <div id="pills-speciality" style="display:contents;"></div>
+                      <input class="sd-input" id="inp-speciality" placeholder="Search speciality…" autocomplete="off" />
+                    </div>
+                    <div class="sd-list" id="list-speciality"></div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Designation</label>
+                  <div class="sd-wrap" id="sd-designation">
+                    <div class="sd-input-box" onclick="this.querySelector('.sd-input').focus()">
+                      <div id="pills-designation" style="display:contents;"></div>
+                      <input class="sd-input" id="inp-designation" placeholder="Search designation…" autocomplete="off" />
+                    </div>
+                    <div class="sd-list" id="list-designation"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="fg2">
+                <div class="form-group">
+                  <label class="form-label">Qualifications <span class="req">*</span></label>
+                  <div class="sd-wrap" id="sd-qualifications">
+                    <div class="sd-input-box" onclick="this.querySelector('.sd-input').focus()">
+                      <div id="pills-qualifications" style="display:contents;"></div>
+                      <input class="sd-input" id="inp-qualifications" placeholder="Select qualifications…" autocomplete="off" />
+                    </div>
+                    <div class="sd-list" id="list-qualifications"></div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Years of Experience <span class="req">*</span></label>
+                  <input class="form-input" type="number" id="p-exp" placeholder="e.g. 6" value="6" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Intro / Headline</label>
+                <input class="form-input" id="p-headline" placeholder="e.g. Experienced Cardiologist with 15+ years of practice" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Bio <span class="req">*</span></label>
+                <div class="bio-toolbar">
+                  <button class="bio-btn" title="Bold"><b>B</b></button>
+                  <button class="bio-btn" title="Italic"><i>I</i></button>
+                  <button class="bio-btn" title="Underline"><u>U</u></button>
+                  <div style="width:1px;background:var(--border);margin:0 4px;"></div>
+                  <button class="bio-btn" title="Strikethrough"><s>S</s></button>
+                  <button class="bio-btn" title="Undo" style="font-size:.9rem;">↩</button>
+                  <button class="bio-btn" title="Redo" style="font-size:.9rem;">↪</button>
+                  <div style="width:1px;background:var(--border);margin:0 4px;"></div>
+                  <button class="bio-btn" title="Bullet list">≡</button>
+                  <button class="bio-btn" title="Ordered list">⋮</button>
+                  <button class="bio-btn" title="Link">🔗</button>
+                </div>
+                <textarea class="form-input bio-area" id="p-bio" rows="4" placeholder="Write about your professional background, expertise, and achievements…" oninput="updateBioCount()"></textarea>
+                <div style="display:flex;justify-content:flex-end;font-size:.68rem;color:var(--text-3);margin-top:4px;"><span id="bio-count">0</span>/500 characters</div>
+              </div>
+              </div>
+          </div>
+
+        </div><!-- end p-form-container -->
+        </div><!-- end p-form-area -->
+
+        <!-- RIGHT SIDEBAR (contextual to personal) -->
+        <aside class="p-right">
+          <!-- Profile Photo -->
+          <div class="media-card">
+            <div class="media-card-title">Profile Photo</div>
+            <div class="photo-preview" id="photo-preview">
+              MS
+              <button class="photo-remove" id="btn-photo-remove" onclick="removePhoto()" style="display:none;">🗑 Remove</button>
+            </div>
+            <button class="btn btn-secondary btn-sm w-full" onclick="document.getElementById('file-photo').click()">📷 Upload Photo</button>
+            <input type="file" id="file-photo" class="hidden" accept="image/*" onchange="handlePhotoUpload(this)" />
+            <div style="font-size:.72rem;color:var(--text-3);text-align:center;">JPG, PNG · Max 2MB · Min 200×200px</div>
+          </div>
+
+          <!-- Cover Image -->
+          <div class="media-card">
+            <div class="media-card-title">Cover Image</div>
+            <div class="upload-mini" onclick="document.getElementById('file-cover').click()">
+              <input type="file" id="file-cover" class="hidden" accept="image/*" />
+              <svg width="28" height="28" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 6px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <div style="font-size:.78rem;color:var(--text-2);font-weight:600;">Click to upload cover image</div>
+              <div style="font-size:.68rem;color:var(--text-3);margin-top:4px;">JPG, PNG up to 5MB<br/>Recommended: 1200×400px</div>
+            </div>
+          </div>
+
+          <!-- Intro Video -->
+          <div class="media-card">
+            <div class="media-card-title">Introduction Video</div>
+            <div class="upload-mini" onclick="document.getElementById('file-video').click()">
+              <input type="file" id="file-video" class="hidden" accept="video/*" />
+              <svg width="28" height="28" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 6px;display:block;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              <div style="font-size:.78rem;color:var(--text-2);font-weight:600;">Click to upload introduction video</div>
+              <div style="font-size:.68rem;color:var(--text-3);margin-top:4px;">Recommended: 1–2 minutes</div>
+            </div>
+          </div>
+
+          <!-- Social Links -->
+          <div class="media-card">
+            <div class="media-card-title">Social Links</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div class="social-row">
+                <span style="font-size:16px;">🌐</span>
+                <input class="form-input" placeholder="https://yourwebsite.com" id="sl-web" style="font-size:.78rem;padding:8px 12px;" />
+                <button class="btn btn-ghost btn-sm btn-clear" onclick="document.getElementById('sl-web').value=''">Clear</button>
+              </div>
+              <div class="social-row">
+                <span style="font-size:16px;">📘</span>
+                <input class="form-input" placeholder="https://facebook.com/yourprofile" id="sl-fb" style="font-size:.78rem;padding:8px 12px;" />
+                <button class="btn btn-ghost btn-sm btn-clear" onclick="document.getElementById('sl-fb').value=''">Clear</button>
+              </div>
+              <div class="social-row">
+                <span style="font-size:16px;">💼</span>
+                <input class="form-input" placeholder="https://linkedin.com/in/yourprofile" id="sl-li" style="font-size:.78rem;padding:8px 12px;" />
+                <button class="btn btn-ghost btn-sm btn-clear" onclick="document.getElementById('sl-li').value=''">Clear</button>
+              </div>
+              <div class="social-row">
+                <span style="font-size:16px;">📸</span>
+                <input class="form-input" placeholder="https://instagram.com/yourprofile" id="sl-ig" style="font-size:.78rem;padding:8px 12px;" />
+                <button class="btn btn-ghost btn-sm btn-clear" onclick="document.getElementById('sl-ig').value=''">Clear</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div><!-- end panel-personal -->
+
+    <!-- CLINIC DASHBOARD TAB -->
+    <div id="panel-clinic" class="tab-panel">
+      
+      <!-- List View -->
+      <div id="clinic-list-view" style="flex:1; display:flex; flex-direction:column;">
+        <div class="p-form-area" style="padding:0;">
+          <div class="pc" style="border:none; border-radius:0; background:transparent;">
+            <div class="pc-head" style="border-bottom:1px solid var(--border); background:rgba(255,255,255,.02); padding:20px 40px;">
+              <div>
+                <div style="font-size:1.1rem; font-weight:800; color:var(--text-1);">Clinics &amp; Practice Information</div>
+                <p style="font-size:.78rem; color:var(--text-3); margin-top:4px;">Manage all your registered practices and their locations.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="showClinicForm(); return false;" style="padding:10px 18px; display:flex; align-items:center; gap:8px; box-shadow:0 0 15px var(--accent-glow);">
+                <span style="font-size:1.2rem;line-height:1;">+</span> Add New Clinic
+              </button>
+            </div>
+            
+            <div class="pc-body" style="padding:32px 40px; display:flex; flex-direction:column; gap:24px;">
+              
+              <!-- Clinic Card 1: Jivo Care -->
+              <div class="clinic-card">
+                <div class="clinic-logo">🏥</div>
+                <div class="clinic-info">
+                  <div class="clinic-name">
+                    Jivo Care
+                    <div style="display:flex; gap:6px;">
+                      <span class="clinic-badge badge-owner">Owner</span>
+                      <span class="clinic-badge badge-primary">Primary</span>
+                    </div>
+                  </div>
+                  <div class="clinic-detail-row">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-10 13-10 13s-10-6-10-13a10 10 0 0 1 20 0z"/><circle cx="11" cy="10" r="3"/></svg>
+                    <span>41st Floor, Tower-1, Golf Course Ext Rd, Sector 66, Gurugram, Haryana 122101, India</span>
+                  </div>
+                  <div class="clinic-detail-row">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.5 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.32 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z"/></svg>
+                    <span>+91 94644 83963</span>
+                  </div>
+                  <div style="display:flex; gap:12px; margin-top:16px;">
+                    <button class="btn-edit" onclick="showClinicForm('jivo'); return false;">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      Edit Clinic
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Clinic Card 2: NovaCare City Center (Mock) -->
+              <div class="clinic-card">
+                <div class="clinic-logo" style="background:#1A2B4C; color:var(--info);">🏢</div>
+                <div class="clinic-info">
+                  <div class="clinic-name">
+                    NovaCare City Center
+                    <span class="clinic-badge" style="background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-border);">Consultant</span>
+                  </div>
+                  <div class="clinic-detail-row">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-10 13-10 13s-10-6-10-13a10 10 0 0 1 20 0z"/><circle cx="11" cy="10" r="3"/></svg>
+                    <span>M.G. Road, Sector 25, Gurugram, Haryana, India</span>
+                  </div>
+                  <div class="clinic-detail-row">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.5 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.32 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z"/></svg>
+                    <span>+91 91234 56789</span>
+                  </div>
+                  <div style="display:flex; gap:12px; margin-top:16px;">
+                    <button class="btn-edit" onclick="showClinicForm('city-center'); return false;">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      Edit Clinic
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form View (Add/Edit Clinic) -->
+      <div id="clinic-form-view" style="display:none; flex:1; flex-direction:row; overflow:hidden;">
+        
+        <!-- Left Form Area -->
+        <div class="p-form-area" style="position:relative;">
+          
+          <!-- Form Header / Back Action -->
+          <div style="margin-bottom:20px; display:flex; align-items:center; gap:14px;">
+            <button class="btn btn-ghost btn-sm" onclick="hideClinicForm()" style="padding:8px 12px; font-weight:700; color:var(--text-3);">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+              Back to List
+            </button>
+            <div style="font-size:1.1rem; font-weight:800; color:var(--text-1);" id="form-clinic-title">Register New Clinic</div>
+          </div>
+
+          <div class="p-form-container">
+            <!-- Basic Information -->
+            <div class="pc">
+              <div class="pc-head"><span class="pc-title">Basic Information</span></div>
+              <div class="pc-body">
+                <div class="fg2">
+                  <div class="form-group">
+                    <label class="form-label">Clinic Name <span class="req">*</span></label>
+                    <input class="form-input" id="c-name" placeholder="Enter clinic name" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Clinic Type <span class="req">*</span></label>
+                    <select class="form-input" id="c-type">
+                      <option value="">Select Clinic Type</option>
+                      <option>Multispeciality</option>
+                      <option>Single Speciality</option>
+                      <option>Diagnostic Center</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Clinic Description <span class="req">*</span></label>
+                  <textarea class="form-input bio-area" id="c-bio" rows="4" placeholder="Provide detailed information about your clinic..."></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Address Information -->
+            <div class="pc">
+              <div class="pc-head"><span class="pc-title">Address Information</span></div>
+              <div class="pc-body">
+                <div class="form-group">
+                  <label class="form-label">Pin Clinic Location on Map <span class="req">*</span></label>
+                  <div style="position:relative;">
+                    <div class="map-search-wrap">
+                      <input class="map-search-input" id="c-map-search" placeholder="Search location..." autocomplete="off" />
+                      <div class="map-search-results" id="c-map-results"></div>
+                    </div>
+                    <div id="clinic-map" style="height:260px; border-radius:var(--r-md); border:1px solid var(--border);"></div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Full Clinic Address <span class="req">*</span></label>
+                  <input class="form-input" id="c-address" placeholder="Street Address" />
+                </div>
+                <div class="fg2">
+                  <div class="form-group">
+                    <label class="form-label">State <span class="req">*</span></label>
+                    <input class="form-input" id="c-state" placeholder="State/Province" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">City <span class="req">*</span></label>
+                    <input class="form-input" id="c-city" placeholder="City" />
+                  </div>
+                </div>
+                <div class="fg2">
+                  <div class="form-group">
+                    <label class="form-label">Postal/Zip Code <span class="req">*</span></label>
+                    <input class="form-input" id="c-zip" placeholder="PIN Code" />
+                  </div>
+                  <div style="display:flex;align-items:center;padding-top:28px;">
+                    <label class="check-item"><input type="checkbox" id="c-primary" /> Mark as Primary Location</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="pc">
+              <div class="pc-head"><span class="pc-title">Contact Information</span></div>
+              <div class="pc-body">
+                <div class="fg2">
+                  <div class="form-group">
+                    <label class="form-label">Mobile Number <span class="req">*</span></label>
+                    <input class="form-input" id="c-mobile" placeholder="+91 XXXXX XXXXX" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Email Address <span class="req">*</span></label>
+                    <input class="form-input" id="c-email" placeholder="clinic@example.com" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Amenities & Services -->
+            <div class="pc">
+              <div class="pc-head"><span class="pc-title">Amenities &amp; Services</span></div>
+              <div class="pc-body">
+                <div class="form-group">
+                  <label class="form-label">Clinic Amenities</label>
+                  <div class="tag-container" id="amenities-container"></div>
+                  <div style="display:flex;gap:10px;margin-top:10px;">
+                    <input class="form-input" id="inp-amenity" placeholder="E.g. Pharmacy, Wi-Fi" style="flex:1;" />
+                    <button class="btn btn-secondary btn-sm" onclick="addClinicTag('amenities')">+ Add</button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Services Offered</label>
+                  <div class="tag-container" id="services-container"></div>
+                  <div style="display:flex;gap:10px;margin-top:10px;">
+                    <input class="form-input" id="inp-service" placeholder="E.g. Vaccination, X-Ray" style="flex:1;" />
+                    <button class="btn btn-secondary btn-sm" onclick="addClinicTag('services')">+ Add</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Legal & Payment -->
+            <div class="pc">
+              <div class="pc-head"><span class="pc-title">Legal &amp; Payment</span></div>
+              <div class="pc-body">
+                <div class="fg2">
+                  <div class="form-group">
+                    <label class="form-label">GST Number</label>
+                    <input class="form-input" id="c-gst" placeholder="GST Reg No." />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Consultation Fee (₹)</label>
+                    <input class="form-input" type="number" id="c-fee" placeholder="500" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Payment Methods</label>
+                  <div class="check-grid">
+                    <label class="check-item"><input type="checkbox" checked /> Cash</label>
+                    <label class="check-item"><input type="checkbox" checked /> Card</label>
+                    <label class="check-item"><input type="checkbox" checked /> UPI</label>
+                    <label class="check-item"><input type="checkbox" /> Insurance</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding-top:20px; display:flex; justify-content:flex-end;">
+               <button class="btn btn-primary" style="min-width:220px; padding:14px 32px; font-weight:700; box-shadow:0 0 20px var(--accent-glow);" onclick="hideClinicForm(); toast('Clinic updated!', 'success')">Save Clinic Details</button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Right Media Sidebar -->
+        <aside class="p-right">
+          <div class="media-card">
+            <div class="media-card-title">Clinic Logo</div>
+            <div class="photo-preview" id="c-logo-preview" onclick="document.getElementById('c-file-logo').click()" style="aspect-ratio:1;">
+               <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+            <input type="file" id="c-file-logo" class="hidden" accept="image/*" />
+          </div>
+          
+          <div class="media-card">
+            <div class="media-card-title">Cover Image</div>
+            <div class="photo-preview" id="c-cover-preview" onclick="document.getElementById('c-file-cover').click()" style="aspect-ratio:3/1;">
+               <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <input type="file" id="c-file-cover" class="hidden" accept="image/*" />
+          </div>
+
+          <div class="media-card">
+            <div class="media-card-title">Intro Video</div>
+            <div class="upload-mini" onclick="document.getElementById('c-file-video').click()">
+              <input type="file" id="c-file-video" class="hidden" accept="video/*" />
+              <svg width="24" height="24" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 6px;display:block;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              <div style="font-size:.78rem;color:var(--text-2);font-weight:600;">Upload Clinic Video</div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+
+    </div>
+    <div id="panel-availability" class="tab-panel">
+      <div class="p-form-area" style="overflow-y:auto; flex:1;"><div class="p-form-container" style="display:flex; flex-direction:column; flex:1;">
+      <!-- List View -->
+      <div id="availability-list-view" style="display:block; width:100%; flex:1;">
+        <div class="sm-header">
+          <div class="sm-title">Schedule Manager</div>
+          <div class="sm-actions">
+            <button class="btn-sm-orange" onclick="toast('Block time coming soon', 'info')">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            </button>
+            <button class="btn-add-schedule" onclick="showScheduleForm()">
+              <span style="font-size:1.2rem;">+</span> Add Schedule
+            </button>
+          </div>
+        </div>
+
+        <div class="sm-filters">
+          <div class="sm-filter-item">
+            <label>Doctor</label>
+            <div class="sm-filter-input">
+              <span>Dr. Nitin Kumar</span>
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+          </div>
+          <div class="sm-filter-item">
+            <label>Clinic</label>
+            <div class="sm-filter-input">
+              <span id="sm-active-clinic">Nitin's Clinic</span>
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-10 13-10 13s-10-6-10-13a10 10 0 0 1 20 0z"/><circle cx="11" cy="10" r="3"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:.7rem; font-weight:800; color:var(--text-3); text-transform:uppercase; margin-bottom:12px; letter-spacing:.05em;">
+          Scheduled Slots <span id="sm-slot-count" style="margin-left:8px; opacity:.6;">0 CARDS</span>
+        </div>
+
+        <div id="sm-sched-grid" class="sched-grid">
+          <!-- Schedules will be rendered here -->
+        </div>
+      </div>
+
+      <!-- Form View -->
+      <div id="availability-form-view" style="display:none; width:100%;">
+        <div class="sm-form-box">
+          <div class="sm-form-header">
+            <div class="sm-form-title" id="sm-form-title">New Schedule Slot</div>
+            <button class="sb-ic" onclick="hideScheduleForm()" style="width:32px; height:32px;">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="sm-row">
+            <div class="sm-field">
+              <label>Start Time</label>
+              <input type="time" id="sm-start-time" class="sm-filter-input" style="outline:none;" value="09:00">
+            </div>
+            <div class="sm-field">
+              <label>End Time</label>
+              <input type="time" id="sm-end-time" class="sm-filter-input" style="outline:none;" value="18:00">
+            </div>
+          </div>
+
+          <div class="sm-field" style="margin-bottom:24px;">
+            <label>Services</label>
+            <div class="sm-service-select" id="sm-service-trigger">
+              <div id="sm-selected-services" style="display:flex; flex-wrap:wrap; gap:6px;">
+                <span style="color:var(--text-3); font-size:.85rem;">Select services...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sm-header" style="margin-bottom:12px;">
+            <div class="sm-field">
+              <label>When</label>
+            </div>
+            <div class="sm-toggle-group">
+              <button class="sm-toggle-btn active">Week</button>
+              <button class="sm-toggle-btn">Day</button>
+            </div>
+          </div>
+
+          <div class="day-picker" style="margin-bottom:24px;">
+            <div class="day-circle" onclick="toggleSmDay(0)">S</div>
+            <div class="day-circle active" onclick="toggleSmDay(1)">M</div>
+            <div class="day-circle active" onclick="toggleSmDay(2)">T</div>
+            <div class="day-circle active" onclick="toggleSmDay(3)">W</div>
+            <div class="day-circle active" onclick="toggleSmDay(4)">T</div>
+            <div class="day-circle active" onclick="toggleSmDay(5)">F</div>
+            <div class="day-circle" onclick="toggleSmDay(6)">S</div>
+          </div>
+
+          <div class="sm-header" style="margin-bottom:12px;">
+            <div class="sm-field">
+              <label>Repeat</label>
+            </div>
+            <div class="sm-toggle-group">
+              <button class="sm-toggle-btn active">Weekly</button>
+              <button class="sm-toggle-btn">Custom</button>
+            </div>
+          </div>
+
+          <button class="btn-save-sched" id="btn-save-schedule" onclick="saveSchedule()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Save Schedule
+          </button>
+        </div>
+      </div>
+      </div></div>
+    </div>
+    <div id="panel-experience" class="tab-panel">
+      <div class="p-form-area"><div class="p-form-container">
+        <div class="pc"><div class="pc-head"><span class="pc-title">Work Experience</span></div><div class="pc-body" style="padding-top:16px;"><p style="color:var(--text-3);font-size:.86rem;">Work experience entries go here.</p></div></div>
+      </div></div>
+    </div>
+    <div id="panel-qualifications" class="tab-panel">
+      <div class="p-form-area"><div class="p-form-container">
+        <div class="pc"><div class="pc-head"><span class="pc-title">Qualifications</span></div><div class="pc-body" style="padding-top:16px;"><p style="color:var(--text-3);font-size:.86rem;">Education and qualification details go here.</p></div></div>
+      </div></div>
+    </div>
+    <div id="panel-services" class="tab-panel">
+      <div class="p-form-area"><div class="p-form-container">
+        <div class="pc"><div class="pc-head"><span class="pc-title">Services &amp; Procedures</span></div><div class="pc-body" style="padding-top:16px;"><p style="color:var(--text-3);font-size:.86rem;">Services list goes here.</p></div></div>
+      </div></div>
+    </div>
+    <div id="panel-awards" class="tab-panel">
+      <div class="p-form-area"><div class="p-form-container">
+        <div class="pc"><div class="pc-head"><span class="pc-title">Awards &amp; Memberships</span></div><div class="pc-body" style="padding-top:16px;"><p style="color:var(--text-3);font-size:.86rem;">Awards and memberships go here.</p></div></div>
+      </div></div>
+    </div>
+    </div><!-- end p-body -->
+
+    <!-- Save Bar -->
+    <div class="p-save-bar" id="main-save-bar">
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='doctor.html'" style="font-weight:700; opacity:.7;">Skip for now →</button>
+      <div style="display:flex;gap:12px;">
+        <button class="btn btn-secondary btn-sm" onclick="calcCompletion(); toast('Draft saved!', 'info')">Save as Draft</button>
+        <button class="btn btn-primary" style="min-width:200px;padding:12px 28px; font-weight:700; box-shadow:0 0 20px var(--accent-glow);" onclick="saveProfile()">Save &amp; Continue →</button>
+      </div>
+    </div>
+
+  </div><!-- end p-main -->
+</div><!-- end p-layout -->
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// --- DATA LISTS ---
+const DATA = {
+  languages: ["English", "Hindi", "Bengali", "Telugu", "Marathi", "Tamil", "Gujarati", "Urdu", "Kannada", "Odia", "Malayalam", "Punjabi", "Spanish", "French", "German", "Mandarin"],
+  speciality: ["Cardiology", "Dermatology", "Endocrinology", "Gastroenterology", "General Medicine", "Gynaecology", "Neurology", "Ophthalmology", "Orthopedics", "Pediatrics", "Psychiatry", "Radiology", "Urology", "Oncology", "Nephrology", "General Surgery"],
+  designation: ["Consultant", "Senior Consultant", "Medical Director", "Chief Surgeon", "HOD", "Resident Doctor", "Associate Professor", "Clinical Lead", "Visiting Consultant"],
+  qualifications: ["MBBS", "MD", "MS", "DNB", "DM", "MCh", "Diploma", "BDS", "MDS", "PhD", "Fellowship", "Other"]
+};
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('nav-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  
+  initDropdown('languages', true);
+  initDropdown('speciality', true);
+  initDropdown('designation', true);
+  initDropdown('qualifications', true);
+  
+  initMap();
+  calcCompletion();
+});
+
+// --- SEARCHABLE DROPDOWNS ---
+function initDropdown(id, isMulti = false) {
+  const wrap = document.getElementById(`sd-${id}`);
+  const inp = document.getElementById(`inp-${id}`);
+  const list = document.getElementById(`list-${id}`);
+  const pills = document.getElementById(`pills-${id}`);
+  let selected = [];
+
+  function renderList(filter = '') {
+    const filtered = DATA[id].filter(opt => opt.toLowerCase().includes(filter.toLowerCase()) && !selected.includes(opt));
+    list.innerHTML = filtered.map(opt => `<div class="sd-opt" onclick="selectOpt('${id}', '${opt}', ${isMulti})">${opt}</div>`).join('');
+    list.style.display = filtered.length ? 'block' : 'none';
+  }
+
+  inp.onfocus = () => renderList(inp.value);
+  inp.oninput = () => renderList(inp.value);
+  
+  document.addEventListener('click', e => {
+    if (!wrap.contains(e.target)) list.style.display = 'none';
+  });
+
+  window.selectOpt = (dropdownId, val, multi) => {
+    const dInp = document.getElementById(`inp-${dropdownId}`);
+    const dList = document.getElementById(`list-${dropdownId}`);
+    const dPills = document.getElementById(`pills-${dropdownId}`);
+    
+    if (multi) {
+      if (!selected.includes(val)) {
+        selected.push(val);
+        const p = document.createElement('div');
+        p.className = 'lang-pill';
+        p.style.margin = '0';
+        p.innerHTML = `${val} <button onclick="removeSelected('${dropdownId}', '${val}')">×</button>`;
+        dPills.appendChild(p);
+      }
+      dInp.value = '';
+    } else {
+      dInp.value = val;
+    }
+    dList.style.display = 'none';
+    calcCompletion();
+  };
+
+  window.removeSelected = (dropdownId, val) => {
+    selected = selected.filter(x => x !== val);
+    const dPills = document.getElementById(`pills-${dropdownId}`);
+    Array.from(dPills.children).forEach(c => {
+      if (c.textContent.includes(val)) c.remove();
+    });
+    calcCompletion();
+  };
+}
+
+// --- MAP & LOCATION SEARCH ---
+let map, marker, searchTimeout;
+const mapSearchInp = document.getElementById('map-search');
+const mapResults = document.getElementById('map-search-results');
+
+function initMap() {
+  map = L.map('profile-map').setView([28.6139, 77.2090], 12);
+  L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(map);
+  marker = L.marker([28.6139, 77.2090], {draggable:true}).addTo(map);
+  map.on('click', e => { marker.setLatLng(e.latlng); reverseGeocode(e.latlng.lat, e.latlng.lng); });
+  marker.on('dragend', e => { const ll=e.target.getLatLng(); reverseGeocode(ll.lat, ll.lng); });
+}
+
+mapSearchInp.oninput = () => {
+  clearTimeout(searchTimeout);
+  const q = mapSearchInp.value.trim();
+  if (q.length < 3) { mapResults.style.display='none'; return; }
+  searchTimeout = setTimeout(() => execMapSearch(q), 400);
+};
+
+async function execMapSearch(q) {
+  mapResults.innerHTML = '<div class="ms-loading">Searching local areas...</div>';
+  mapResults.style.display = 'block';
+  try {
+    const ep = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&addressdetails=1&countrycodes=in&limit=6`;
+    const r = await fetch(ep, { headers: { 'Accept-Language': 'en-US,en;q=0.9' } });
+    const results = await r.json();
+    if (!results.length) { 
+      mapResults.innerHTML = '<div class="ms-loading">No results found in India</div>';
+      return; 
+    }
+    
+    mapResults.innerHTML = results.map(res => `
+      <div class="ms-item" onclick="selectMapResult(${res.lat}, ${res.lon}, '${res.display_name.replace(/'/g, "\\'")}')">
+        <strong>${res.name || 'Location'}</strong><br/>
+        <span style="font-size:.72rem;opacity:.8;">${res.display_name}</span>
+      </div>
+    `).join('');
+  } catch(e) { 
+    console.warn(e);
+    mapResults.innerHTML = '<div class="ms-loading" style="color:var(--danger)">Search failed. Please try manual pinning.</div>';
+  }
+}
+
+window.selectMapResult = (lat, lng, name) => {
+  const ll = [lat, lng];
+  map.setView(ll, 16);
+  marker.setLatLng(ll);
+  mapResults.style.display = 'none';
+  mapSearchInp.value = name;
+  reverseGeocode(lat, lng);
+};
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+    const d = await r.json();
+    const a = d.address || {};
+    document.getElementById('p-address').value = d.display_name || '';
+    document.getElementById('p-state').value = a.state || '';
+    document.getElementById('p-city').value = a.city || a.town || a.village || a.suburb || '';
+    document.getElementById('p-zip').value = a.postcode || '';
+    document.getElementById('p-street').value = a.road || a.quarter || '';
+    calcCompletion();
+  } catch(err) { console.warn(err); }
+}
+
+// --- PHOTO LOGIC ---
+function handlePhotoUpload(input) {
+  if(!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('photo-preview');
+    prev.style.backgroundImage = `url(${e.target.result})`;
+    prev.style.backgroundSize = 'cover';
+    prev.style.backgroundPosition = 'center';
+    prev.style.color = 'transparent';
+    document.getElementById('btn-photo-remove').style.display = 'block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function removePhoto() {
+  const prev = document.getElementById('photo-preview');
+  prev.style.backgroundImage = '';
+  prev.style.color = '';
+  document.getElementById('btn-photo-remove').style.display = 'none';
+  document.getElementById('file-photo').value = '';
+}
+
+// --- UI HELPERS ---
+function switchTab(t) {
+  document.querySelectorAll('.p-tab').forEach(el=>el.classList.toggle('active', el.dataset.tab===t));
+  document.querySelectorAll('.tab-panel').forEach(el=>el.classList.toggle('active', el.id===`panel-${t}`));
+  
+  // Set global state for CSS
+  document.body.dataset.activeTab = t;
+  
+  // Show save bar for all base tabs except availability
+  const sb = document.getElementById('main-save-bar');
+  if (sb) {
+    sb.style.display = (t === 'availability') ? 'none' : 'flex';
+  }
+  
+  // Ensure layout state is reset
+  document.querySelector('.p-layout')?.classList.remove('clinic-form-active');
+  document.querySelector('.p-layout')?.classList.remove('sm-form-active');
+  
+  // Reset views
+  if (t !== 'clinic') hideClinicForm();
+  if (t !== 'availability') hideScheduleForm();
+}
+
+function toggleCard(id) {
+  const body = document.getElementById(`body-${id}`);
+  const chev = document.getElementById(`chev-${id}`);
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  chev?.classList.toggle('open', !isOpen);
+}
+
+function updateBioCount() {
+  const len = document.getElementById('p-bio').value.length;
+  document.getElementById('bio-count').textContent = len;
+}
+
+const tracked = ['p-fname','p-lname','p-gender','p-dob','p-email','p-phone','p-address','p-zip','p-exp','p-bio'];
+function calcCompletion() {
+  const filled = tracked.filter(id => { const el=document.getElementById(id); return el && el.value.trim(); }).length;
+  const pct = Math.round((filled/tracked.length)*100);
+  document.getElementById('completion-pct').textContent = pct+'%';
+  document.getElementById('completion-ring').style.setProperty('--pct', pct);
+}
+
+function saveProfile() {
+  toast('Profile saved successfully!', 'success');
+  setTimeout(()=> window.location.href='doctor.html', 1000);
+}
+
+function toast(msg, type = 'info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span>${type==='success'?'✓':'ℹ'}</span> ${msg}`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// --- CLINIC FORM LOGIC ---
+let clinicMap, clinicMarker, cSearchTimeout;
+const clinicTags = { amenities: [], services: [] };
+
+window.showClinicForm = function(id = null) {
+  document.getElementById('clinic-list-view').style.display = 'none';
+  const fv = document.getElementById('clinic-form-view');
+  fv.style.display = 'flex';
+  document.getElementById('form-clinic-title').textContent = id ? 'Edit Clinic Details' : 'Register New Clinic';
+  
+  // Hide main footer CTA bar on register form via layout state
+  document.querySelector('.p-layout')?.classList.add('clinic-form-active');
+  
+  if (!clinicMap) {
+    initClinicMap();
+  } else {
+    setTimeout(() => clinicMap.invalidateSize(), 150);
+  }
+};
+
+window.hideClinicForm = function() {
+  document.getElementById('clinic-form-view').style.display = 'none';
+  document.getElementById('clinic-list-view').style.display = 'flex';
+  
+  // Show main footer CTA bar when back to list
+  document.querySelector('.p-layout')?.classList.remove('clinic-form-active');
+};
+
+function initClinicMap() {
+  clinicMap = L.map('clinic-map').setView([28.6139, 77.2090], 12);
+  L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(clinicMap);
+  clinicMarker = L.marker([28.6139, 77.2090], {draggable:true}).addTo(clinicMap);
+  
+  clinicMap.on('click', e => { 
+    clinicMarker.setLatLng(e.latlng); 
+    reverseGeocodeClinic(e.latlng.lat, e.latlng.lng); 
+  });
+  clinicMarker.on('dragend', e => { 
+    const ll = e.target.getLatLng(); 
+    reverseGeocodeClinic(ll.lat, ll.lng); 
+  });
+
+  const cInp = document.getElementById('c-map-search');
+  const cRes = document.getElementById('c-map-results');
+
+  cInp.oninput = () => {
+    clearTimeout(cSearchTimeout);
+    const q = cInp.value.trim();
+    if (q.length < 3) { cRes.style.display='none'; return; }
+    cSearchTimeout = setTimeout(async () => {
+      cRes.innerHTML = '<div class="ms-loading">Searching...</div>';
+      cRes.style.display = 'block';
+      try {
+        const ep = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&addressdetails=1&countrycodes=in&limit=5`;
+        const r = await fetch(ep);
+        const results = await r.json();
+        if (!results.length) { cRes.innerHTML = '<div class="ms-loading">No results</div>'; return; }
+        cRes.innerHTML = results.map(res => `
+          <div class="ms-item" onclick="selectClinicMapResult(${res.lat}, ${res.lon}, '${res.display_name.replace(/'/g, "\\'")}')">
+            ${res.display_name}
+          </div>
+        `).join('');
+      } catch(e) { cRes.style.display='none'; }
+    }, 400);
+  };
+}
+
+window.selectClinicMapResult = (lat, lng, name) => {
+  const ll = [lat, lng];
+  clinicMap.setView(ll, 16);
+  clinicMarker.setLatLng(ll);
+  document.getElementById('c-map-results').style.display = 'none';
+  document.getElementById('c-map-search').value = name;
+  reverseGeocodeClinic(lat, lng);
+};
+
+async function reverseGeocodeClinic(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+    const d = await r.json();
+    const a = d.address || {};
+    document.getElementById('c-address').value = d.display_name || '';
+    document.getElementById('c-zip').value = a.postcode || '';
+    document.getElementById('c-state').value = a.state || '';
+    document.getElementById('c-city').value = a.city || a.town || '';
+  } catch(e) {}
+}
+
+window.addClinicTag = function(type) {
+  const inp = document.getElementById(`inp-${type.slice(0, -3)}`);
+  const val = inp.value.trim();
+  if (!val || clinicTags[type].includes(val)) return;
+  clinicTags[type].push(val);
+  renderClinicTags(type);
+  inp.value = '';
+};
+
+function renderClinicTags(type) {
+  const container = document.getElementById(`${type}-container`);
+  if (!clinicTags[type].length) {
+    container.innerHTML = '<div style="color:var(--text-3); font-size:.8rem;">No tags added</div>';
+    return;
+  }
+  container.innerHTML = clinicTags[type].map(tag => `
+    <div class="tag">${tag} <button onclick="removeClinicTag('${type}', '${tag}')">×</button></div>
+  `).join('');
+}
+
+window.removeClinicTag = (type, val) => {
+  clinicTags[type] = clinicTags[type].filter(t => t !== val);
+  renderClinicTags(type);
+};
+
+// --- CLINIC MEDIA ---
+window.handleClinicMedia = function(input, type) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const prev = document.getElementById(`c-${type}-preview`);
+    prev.style.backgroundImage = `url(${ev.target.result})`;
+    prev.style.backgroundSize = 'cover';
+    prev.style.backgroundPosition = 'center';
+    prev.innerHTML = '';
+  };
+  reader.readAsDataURL(input.files[0]);
+};
+
+// --- SCHEDULE MANAGER LOGIC ---
+let scheduleData = [
+  { id: 1, startTime: "09:00", endTime: "18:00", days: [1, 2, 3, 4, 5], services: ["Consultation", "Follow up"], repeat: "Weekly" },
+  { id: 2, startTime: "10:00", endTime: "14:00", days: [0, 6], services: ["Surgery"], repeat: "Weekly" }
+];
+let selectedSmDays = [1, 2, 3, 4, 5];
+let editingScheduleId = null;
+
+window.showScheduleForm = function(id = null) {
+  editingScheduleId = id;
+  const list = document.getElementById('availability-list-view');
+  const form = document.getElementById('availability-form-view');
+  list.style.display = 'none';
+  form.style.display = 'block';
+  document.querySelector('.p-layout').classList.add('sm-form-active');
+  
+  if (id) {
+    const s = scheduleData.find(x => x.id === id);
+    document.getElementById('sm-form-title').textContent = "Edit Schedule Slot";
+    document.getElementById('sm-start-time').value = s.startTime;
+    document.getElementById('sm-end-time').value = s.endTime;
+    selectedSmDays = [...s.days];
+  } else {
+    document.getElementById('sm-form-title').textContent = "New Schedule Slot";
+    document.getElementById('sm-start-time').value = "09:00";
+    document.getElementById('sm-end-time').value = "18:00";
+    selectedSmDays = [1, 2, 3, 4, 5];
+  }
+  renderSmDayPicker();
+};
+
+window.hideScheduleForm = function() {
+  const list = document.getElementById('availability-list-view');
+  const form = document.getElementById('availability-form-view');
+  if (!list || !form) return;
+  list.style.display = 'block';
+  form.style.display = 'none';
+  document.querySelector('.p-layout')?.classList.remove('sm-form-active');
+  editingScheduleId = null;
+};
+
+window.toggleSmDay = function(day) {
+  const idx = selectedSmDays.indexOf(day);
+  if (idx > -1) selectedSmDays.splice(idx, 1);
+  else selectedSmDays.push(day);
+  renderSmDayPicker();
+};
+
+function renderSmDayPicker() {
+  const circles = document.querySelectorAll('.day-picker .day-circle');
+  circles.forEach((c, i) => {
+    c.classList.toggle('active', selectedSmDays.includes(i));
+  });
+}
+
+window.saveSchedule = function() {
+  const start = document.getElementById('sm-start-time').value;
+  const end = document.getElementById('sm-end-time').value;
+  
+  if (selectedSmDays.length === 0) {
+    toast('Please select at least one day', 'warning');
+    return;
+  }
+
+  const newSched = {
+    id: editingScheduleId || Date.now(),
+    startTime: start,
+    endTime: end,
+    days: [...selectedSmDays],
+    services: ["Consultation", "Follow up"], // Default for now
+    repeat: "Weekly"
+  };
+
+  if (editingScheduleId) {
+    const idx = scheduleData.findIndex(x => x.id === editingScheduleId);
+    scheduleData[idx] = newSched;
+    toast('Schedule updated successfully', 'success');
+  } else {
+    scheduleData.unshift(newSched);
+    toast('New schedule added', 'success');
+  }
+
+  hideScheduleForm();
+  renderSchedules();
+};
+
+window.deleteSchedule = function(id) {
+  scheduleData = scheduleData.filter(x => x.id !== id);
+  renderSchedules();
+  toast('Schedule removed', 'info');
+};
+
+function renderSchedules() {
+  const grid = document.getElementById('sm-sched-grid');
+  const count = document.getElementById('sm-slot-count');
+  if (!grid || !count) return;
+
+  count.textContent = `${scheduleData.length} ${scheduleData.length === 1 ? 'CARD' : 'CARDS'}`;
+  grid.innerHTML = scheduleData.length ? '' : '<div style="text-align:center; padding:40px; color:var(--text-3); font-size:.9rem; background:var(--bg-sidebar); border-radius:var(--r-lg); border:1px dashed var(--border);">No scheduled slots yet. Click "+ Add Schedule" to begin.</div>';
+
+  scheduleData.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'sched-card';
+    card.innerHTML = `
+      <div class="sched-card-top">
+        <div class="sched-time">${formatTime(s.startTime)} - ${formatTime(s.endTime)}</div>
+        <div style="display:flex; gap:10px;">
+          <button class="sb-ic" onclick="showScheduleForm(${s.id})" style="width:28px;height:28px;color:var(--text-2);"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="sb-ic" onclick="deleteSchedule(${s.id})" style="width:28px;height:28px;color:#FF6700;"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+        </div>
+      </div>
+      <div class="sched-services">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        ${s.services.join(', ')}
+      </div>
+      <div class="day-picker">
+        ${['S','M','T','W','T','F','S'].map((d, i) => `<div class="day-circle ${s.days.includes(i) ? 'active' : ''}" style="width:30px;height:30px;font-size:.65rem;cursor:default;">${d}</div>`).join('')}
+      </div>
+      <div class="sched-meta">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+        Every ${s.repeat.toLowerCase()}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function formatTime(time) {
+  const [h, m] = time.split(':');
+  const hh = parseInt(h);
+  const ampm = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
+}
+
+// Initial Render
+renderSchedules();
+</script>
+</body>
+</html>

@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaCare — Create Account</title>
+  <meta name="description" content="Register an account on NovaCare clinic management platform." />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Leaflet & Geocoder -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <style>
+    /* Leaflet Dark Mode Filter */
+    .leaflet-tile-pane {
+      filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+    }
+    .leaflet-container {
+      background: var(--bg-surface) !important;
+    }
+    #map {
+      height: 300px;
+      width: 100%;
+      border-radius: var(--r-md);
+      border: 1px solid var(--border);
+      z-index: 1;
+      margin-bottom: 12px;
+    }
+    /* Simple fix for geocoder search icon color in dark mode */
+    .leaflet-control-geocoder-icon {
+      filter: invert(1);
+    }
+    .leaflet-control-geocoder-form input {
+      background: var(--bg-surface) !important;
+      color: var(--text-1) !important;
+      border: 1px solid var(--border) !important;
+    }
+    .leaflet-control-geocoder-alternatives {
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 0 0 var(--r-md) var(--r-md) !important;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .leaflet-control-geocoder-alternatives li {
+      border-bottom: 1px solid var(--border) !important;
+    }
+    .leaflet-control-geocoder-alternatives li a {
+      color: var(--text-1) !important;
+      font-size: 0.85rem !important;
+      padding: 8px 12px !important;
+    }
+    .leaflet-control-geocoder-alternatives li a:hover {
+      background: var(--bg-hover) !important;
+    }
+    .leaflet-control-geocoder-alternatives li a em {
+      color: var(--text-3) !important;
+      font-style: normal !important;
+    }
+    /* Role Selection View (Centered) */
+    .login-blob1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(0,205,216,0.14), transparent 70%); top: -140px; right: -150px; }
+    .login-blob2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(91,143,249,0.1), transparent 70%); bottom: -100px; left: -100px; }
+
+    .role-card-wrap {
+      width: 100%; max-width: 540px;
+      background: var(--bg-card); border: 1px solid var(--border-hover);
+      border-radius: var(--r-xl); position: relative; z-index: 1;
+      box-shadow: var(--shadow-lg), var(--glow-sm);
+      animation: fadeInUp 0.35s ease;
+      padding: 32px;
+    }
+    .role-select { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+    .role-option {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px; background: var(--bg-surface);
+      border: 2px solid var(--border); border-radius: var(--r-lg);
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .role-option:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+    .role-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+    .role-option-icon {
+      width: 42px; height: 42px; border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .role-option-title { font-size: 0.95rem; font-weight: 700; color: var(--text-1); }
+    .role-option-desc { font-size: 0.78rem; color: var(--text-2); margin-top: 2px; }
+
+    /* Nav */
+    .login-nav { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; z-index: 10; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo-icon { width: 30px; height: 30px; background: linear-gradient(135deg, var(--accent), #0066FF); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 0 12px rgba(0,205,216,0.25); }
+    .nav-logo-text { font-size: 0.95rem; font-weight: 800; color: var(--text-1); }
+
+    /* ════════ SPLIT LAYOUT ════════ */
+    .split-layout { display: flex; min-height: 100vh; overflow: hidden; background: var(--bg-base); }
+    
+    /* Left Panel */
+    .split-left {
+      width: 320px; min-width: 320px;
+      background: #03081A; /* Deep dark to match screenshot contrast */
+      border-right: 1px solid var(--border);
+      padding: 60px 24px;
+      display: flex; flex-direction: column;
+    }
+    .stepper-nav { display: flex; flex-direction: column; flex: 1; }
+    .step-item { display: flex; gap: 16px; align-items: flex-start; position: relative; margin-bottom: 30px; }
+    .step-item::after { 
+        content:''; position:absolute; left:16px; top:36px; bottom:-28px; 
+        width:1px; background:var(--border); 
+    }
+    .step-item:last-child::after { display:none; }
+    .step-icon-wrap {
+      width: 34px; height: 34px; border-radius: var(--r-md);
+      background: var(--bg-surface); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-3); font-size: 15px; position: relative; z-index: 1;
+      transition: all var(--t-fast); flex-shrink:0;
+    }
+    .step-item.active .step-icon-wrap {
+      background: var(--bg-card); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .step-item.done .step-icon-wrap {
+      background: var(--accent); border-color: var(--accent); color: var(--bg-base);
+    }
+    .step-text { margin-top: 4px; }
+    .step-title { font-size: 0.9rem; font-weight: 700; color: var(--text-3); margin-bottom: 3px; transition: color var(--t-fast); }
+    .step-desc { font-size: 0.72rem; color: var(--text-3); line-height: 1.4; transition: color var(--t-fast); }
+    .step-item.active .step-title, .step-item.done .step-title { color: var(--text-1); }
+    .step-item.active .step-desc, .step-item.done .step-desc { color: var(--text-2); }
+
+    /* Right Panel (Form) */
+    .split-right {
+      flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 60px 40px; position: relative;
+    }
+    .form-container { width: 100%; max-width: 680px; animation: fadeIn 0.4s ease; display:flex; flex-direction:column; padding-bottom: 60px; }
+    
+    /* Grid User Icon */
+    .wireframe-logo-container { display: flex; justify-content: center; margin-bottom: 24px; padding-top: 10px; }
+    .user-icon-grid {
+      position: relative; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; color: var(--text-1);
+    }
+    .user-icon-grid::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 16px 16px; background-position: center; z-index: 0;
+    }
+    .user-icon-grid svg { position: relative; z-index: 1; width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.5; fill: none; }
+
+    /* Custom Combo-box (Searchable Select) */
+    .combo-wrap { position: relative; z-index: 50; }
+    .combo-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: #0C1B35; /* Explicit darker card color */
+      border: 1px solid var(--border-hover);
+      border-radius: var(--r-md); padding: 4px;
+      max-height: 220px; overflow-y: auto; z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      backdrop-filter: blur(16px);
+    }
+    .combo-item {
+      padding: 10px 14px; border-radius: var(--r-sm);
+      color: var(--text-2); font-size: 0.88rem; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .combo-item:hover { background: var(--bg-hover); color: var(--text-1); }
+    .combo-item.selected { background: var(--accent-dim); color: var(--accent); }
+
+    .combo-toggle {
+      pointer-events: auto !important;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    /* Titles */
+
+    /* Titles */
+    .auth-title { text-align: center; font-size: 1.6rem; font-weight: 700; color: var(--text-1); margin-bottom: 8px; letter-spacing: -0.01em; }
+    .auth-subtitle { text-align: center; font-size: 0.95rem; color: var(--text-2); margin-bottom: 32px; line-height: 1.5; max-width: 500px; margin-inline: auto; }
+
+    /* Forms */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .form-label { text-transform: none; font-size: 0.85rem; font-weight: 600; color: var(--text-1); letter-spacing: normal; }
+    .req { color: var(--error); margin-left: 2px; font-weight: bold;}
+    .form-hint { font-size: 0.72rem; color: var(--text-3); margin-top: 4px; }
+    .form-input { padding-top: 11px; padding-bottom: 11px; font-size: 0.92rem; background: var(--bg-card); transition: border-color var(--t-fast); }
+    
+    .action-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-3); cursor: pointer; font-size: 18px; }
+    .action-icon:hover { color: var(--text-1); }
+
+    .btn-send-otp { position:absolute; right:5px; top:5px; bottom:5px; display:flex; align-items:center; justify-content:center; padding: 0 16px; font-size:0.75rem; border-radius:var(--r-sm); }
+    
+    .otp-box { width: 44px; height: 44px; text-align: center; font-size: 1.25rem; font-weight: 700; padding: 0; background: var(--bg-card); transition: border-color var(--t-fast); }
+    .otp-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+    .terms-text { text-align: center; font-size: 0.82rem; color: var(--text-3); line-height: 1.6; margin: 24px auto 32px; max-width: 540px; }
+    .terms-link { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-border); text-underline-offset: 3px; }
+    
+    .bottom-nav { text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--text-2); }
+    .bottom-nav a { font-weight: 600; color: var(--text-1); text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 4px; transition: color var(--t-fast); }
+    .bottom-nav a:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+    /* Field Errors & Validation states */
+    .field-error { font-size: 0.72rem; color: var(--error); margin-top: 4px; display: none; }
+    .field-error.show { display: block; }
+    
+    .valid-check { color: var(--success); position: absolute; right: 12px; top: 50%; transform: translateY(-50%); opacity:0; transition: opacity var(--t-fast); }
+    .valid-check.show { opacity: 1; }
+
+    /* File Upload */
+    .file-upload-box { border: 2px dashed var(--border); border-radius: var(--r-md); padding: 32px 20px; text-align: center; cursor: pointer; transition: all var(--t-fast); background: var(--bg-surface); margin-bottom:12px; }
+    .file-upload-box:hover { border-color: var(--accent); background: var(--bg-hover); }
+    .file-upload-icon { font-size: 24px; color: var(--text-3); margin-bottom: 8px; }
+
+    /* SVG icons helper */
+    .icon-svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+
+  <!-- ════════ VIEW 1: ROLE SELECTION (Centered) ════════ -->
+  <div class="login-page" id="view-role">
+    <div class="login-bg-grid"></div>
+    <div class="login-blob login-blob1"></div>
+    <div class="login-blob login-blob2"></div>
+
+    <nav class="login-nav">
+      <a href="index.html" class="nav-logo">
+        <div class="nav-logo-icon">🏥</div>
+        <span class="nav-logo-text">NovaCare</span>
+      </a>
+      <a href="login.html" class="btn btn-ghost btn-sm">Already have an account? Sign In</a>
+    </nav>
+
+    <div class="role-card-wrap">
+      <h2 style="font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px;text-align:center;">Join NovaCare</h2>
+      <p style="font-size:0.9rem;color:var(--text-2);text-align:center;">Who are you creating an account for?</p>
+
+      <div class="role-select">
+        <div class="role-option" onclick="startRegistration('doctor')">
+          <div class="role-option-icon" style="background:rgba(0,205,216,0.14);color:var(--accent);">🩺</div>
+          <div style="flex:1;">
+            <div class="role-option-title">Doctor</div>
+            <div class="role-option-desc">Manage patients, schedule, and consultations.</div>
+          </div>
+          <div><span style="font-size:1.2rem;color:var(--text-3);">→</span></div>
+        </div>
+        <div class="role-option" onclick="startRegistration('admin')">
+          <div class="role-option-icon" style="background:rgba(91,143,249,0.14);color:var(--info);">📊</div>
+          <div style="flex:1;">
+            <div class="role-option-title">Clinic Admin</div>
+            <div class="role-option-desc">Manage operations, revenue, and clinic settings.</div>
+          </div>
+          <div><span style="font-size:1.2rem;color:var(--text-3);">→</span></div>
+        </div>
+        <div class="role-option" onclick="startRegistration('receptionist')">
+          <div class="role-option-icon" style="background:rgba(245,186,0,0.14);color:var(--warning);">👤</div>
+          <div style="flex:1;">
+            <div class="role-option-title">Receptionist</div>
+            <div class="role-option-desc">Handle appointments, walk-ins, and billing.</div>
+          </div>
+          <div><span style="font-size:1.2rem;color:var(--text-3);">→</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ VIEW 2: SPLIT LAYOUT WIZARD ════════ -->
+  <div class="split-layout hidden" id="view-split">
+    
+    <!-- Left Stepper Navigation -->
+    <div class="split-left">
+      <a href="index.html" class="nav-logo" style="position:relative;top:0;left:0;margin-bottom:48px;">
+        <div class="nav-logo-icon">🏥</div>
+        <span class="nav-logo-text">NovaCare</span>
+      </a>
+
+      <div class="stepper-nav" id="stepper">
+        <!-- Dynamically injected based on role -->
+      </div>
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="split-right" style="position: relative;">
+      
+      <!-- Top Right Profile Widget (Visible Step 2+) -->
+      <div id="top-right-profile" class="hidden" style="position: absolute; top: 32px; right: 40px; display: flex; align-items: center; gap: 16px; background: var(--bg-surface); padding: 8px 12px; border-radius: var(--r-md); border: 1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width: 40px; height: 40px; border-radius: 8px; background: var(--accent); color: var(--bg-base); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;" id="nav-avatar">D</div>
+          <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-1);" id="nav-name">Dr. Name</div>
+        </div>
+        <button class="btn btn-sm" style="background: var(--bg-base); color: var(--text-1); border: 1px solid var(--border); padding: 8px 16px; font-weight: 600;" onclick="window.location.href='index.html'">Logout</button>
+      </div>
+
+      <div class="form-container">
+        
+        <!-- ================= STEP 1: CREATE PROFILE ================= -->
+        <div id="step-panel-1">
+          <!-- Grid User Icon -->
+          <div class="wireframe-logo-container">
+            <div class="user-icon-grid">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" stroke="currentColor"/>
+                <line x1="22" y1="11" x2="16" y2="11" stroke="currentColor"/>
+              </svg>
+            </div>
+          </div>
+
+          <h2 class="auth-title">Create Your Profile</h2>
+          <p class="auth-subtitle">Start by adding your basic information—name, profile photo, and contact details. This helps patients recognize and connect with you.</p>
+
+          <form id="reg-form-1" onsubmit="handleStep1(event)" oninput="validateStep1(); saveRegisterState();">
+            
+            <div class="form-grid">
+              <!-- First Name Group with Salutation -->
+              <div style="display:flex; gap:12px; align-items:flex-start;">
+                <div class="form-group" style="width: 80px;">
+                  <label class="form-label">Title<span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <select class="form-input" id="r-salutation" required>
+                      <option value="Dr.">Dr.</option>
+                      <option value="Mr.">Mr.</option>
+                      <option value="Ms.">Ms.</option>
+                      <option value="Mrs.">Mrs.</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label class="form-label">First Name<span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <span class="input-icon"><svg class="icon-svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+                    <input class="form-input has-icon" type="text" id="r-fname" placeholder="Enter your first name" minlength="3" pattern="[a-zA-Z\s]+" required />
+                    <span class="valid-check" id="check-fname"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div class="form-hint">Your legal first name as per ID proof</div>
+                </div>
+              </div>
+
+              <!-- Last Name -->
+              <div class="form-group">
+                <label class="form-label">Last Name</label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+                  <input class="form-input has-icon" type="text" id="r-lname" placeholder="Enter your last name" minlength="3" pattern="[a-zA-Z\s]+" />
+                  <span class="valid-check" id="check-lname"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                </div>
+                <div class="form-hint">Your legal last name as per ID proof</div>
+              </div>
+
+              <!-- Email -->
+              <div class="form-group">
+                <label class="form-label">Email Address<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></span>
+                  <input class="form-input has-icon" type="email" id="r-email" placeholder="Enter your email address" required />
+                  <span class="valid-check" id="check-email"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                </div>
+                <div class="form-hint">(This information is for login only and won't be publicly visible.)</div>
+              </div>
+
+              <!-- Mobile -->
+              <div class="form-group">
+                <label class="form-label">Mobile Number<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></span>
+                  <input class="form-input has-icon" type="tel" id="r-mobile" placeholder="Enter your mobile number" maxlength="10" pattern="\d{10}" style="padding-right:110px;" required />
+                  <button type="button" class="btn btn-primary btn-send-otp" id="btn-send-otp" onclick="triggerOTP()" disabled>Send OTP</button>
+                  <span class="valid-check" id="check-mobile"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                </div>
+                <div class="form-hint">We'll send OTP verification to this number</div>
+              </div>
+              
+              <!-- Hidden OTP Row -->
+              <div class="form-group hidden" id="otp-group" style="grid-column: 1 / -1; margin-bottom: 6px;">
+                <label class="form-label">Enter OTP<span class="req">*</span></label>
+                <div style="display:flex; justify-content:center; gap: 12px; margin-top:4px;" id="otp-inputs">
+                  <input type="text" class="form-input otp-box" maxlength="1" />
+                  <input type="text" class="form-input otp-box" maxlength="1" />
+                  <input type="text" class="form-input otp-box" maxlength="1" />
+                  <input type="text" class="form-input otp-box" maxlength="1" />
+                  <input type="text" class="form-input otp-box" maxlength="1" />
+                  <input type="text" class="form-input otp-box" maxlength="1" />
+                </div>
+                <div style="text-align:center; font-size:0.75rem; color:var(--text-3); margin-top: 8px;">
+                  OTP sent successfully. Verify to continue.
+                </div>
+              </div>
+
+              <!-- Password -->
+              <div class="form-group">
+                <label class="form-label">Password<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+                  <input class="form-input has-icon" type="password" id="r-pass" placeholder="Create a new password" required />
+                  <span class="action-icon" onclick="togglePass('r-pass')" style="right:34px;"><svg class="icon-svg"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+                  <span class="valid-check" id="check-pass"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                </div>
+                <div class="form-hint" id="pw-hint">Minimum 8 chars, 1 uppercase, 1 number, 1 special character</div>
+              </div>
+
+              <!-- Confirm Password -->
+              <div class="form-group">
+                <label class="form-label">Confirm Password<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+                  <input class="form-input has-icon" type="password" id="r-pass2" placeholder="Enter your confirm password" required />
+                  <span class="action-icon" onclick="togglePass('r-pass2')" style="right:34px;"><svg class="icon-svg"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+                  <span class="valid-check" id="check-pass2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Disclaimer terms -->
+            <div class="terms-text">
+              By continuing, you agree to our <a href="#" class="terms-link">Main Services Agreement</a>, <a href="#" class="terms-link">User Terms of Service</a>, NovaCare's <a href="#" class="terms-link">Supplemental Terms</a> & <a href="#" class="terms-link">Privacy Policy</a>.
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg" style="display:block; margin: 0 auto; width:220px; font-size:1rem; padding: 16px;" id="btn-step-1" disabled>
+              Continue
+            </button>
+          </form>
+          
+          <div class="bottom-nav">
+            Already have an account? <a href="login.html">Back to Login</a>
+          </div>
+        </div>
+
+        <!-- ================= STEP 2: PROFESSIONAL DETAILS ================= -->
+        <div id="step-panel-2" class="hidden">
+           
+          <!-- Grid Professional Icon -->
+          <div class="wireframe-logo-container">
+            <div class="user-icon-grid">
+              <span style="font-size:24px; position:relative; z-index:1;">🩺</span>
+            </div>
+          </div>
+
+          <h2 class="auth-title">Professional Details</h2>
+          <p class="auth-subtitle">Highlight your medical qualifications, specialties, and years of experience. Let patients know what you do best and how you can help.</p>
+
+          <form id="reg-form-2" onsubmit="handleStep2(event)" oninput="validateStep2(); saveRegisterState();" onchange="validateStep2(); saveRegisterState();">
+            <div class="form-grid">
+              
+              <!-- Speciality -->
+              <div class="form-group">
+                <label class="form-label">Speciality<span class="req">*</span></label>
+                <select class="form-input" id="r-speciality" required>
+                  <option value="">Select speciality</option>
+                  <option>General Practice</option>
+                  <option>Dermatology</option>
+                  <option>Gynecology</option>
+                  <option>Pediatrics</option>
+                  <option>Ophthalmology</option>
+                  <option>Orthopedics</option>
+                  <option>Cardiology</option>
+                </select>
+              </div>
+
+              <!-- Years of Experience -->
+              <div class="form-group">
+                <label class="form-label">Years of Experience<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <input class="form-input" type="number" id="r-exp" placeholder="Years of Experience" step="0.1" min="0" max="70" required />
+                  <span class="valid-check" id="check-exp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                </div>
+              </div>
+
+              <!-- Qualifications -->
+              <div class="form-group">
+                <label class="form-label">Qualifications<span class="req">*</span></label>
+                <div class="input-wrap combo-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg></span>
+                  <input class="form-input has-icon" type="text" id="r-qualifications" placeholder="Select or type qualification" required onfocus="toggleCombo('qual-list-custom', true)" oninput="filterCombo('qual-list-custom', this.value)" />
+                  <span class="action-icon combo-toggle" onclick="toggleCombo('qual-list-custom')"><svg class="icon-svg" style="width:16px; height:16px;"><path d="m6 9 12 0-6 6z" fill="currentColor"></path></svg></span>
+                  
+                  <div id="qual-list-custom" class="combo-dropdown hidden">
+                    <div class="combo-item" onclick="selectCombo('r-qualifications', 'MBBS', 'qual-list-custom')">MBBS</div>
+                    <div class="combo-item" onclick="selectCombo('r-qualifications', 'MD', 'qual-list-custom')">MD</div>
+                    <div class="combo-item" onclick="selectCombo('r-qualifications', 'MS', 'qual-list-custom')">MS</div>
+                    <div class="combo-item" onclick="selectCombo('r-qualifications', 'BDS', 'qual-list-custom')">BDS</div>
+                    <div class="combo-item" onclick="selectCombo('r-qualifications', 'MDS', 'qual-list-custom')">MDS</div>
+                    <div class="combo-item" onclick="selectCombo('r-qualifications', 'DNB', 'qual-list-custom')">DNB</div>
+                    <div class="combo-item" onclick="selectCombo('r-qualifications', 'Diploma', 'qual-list-custom')">Diploma</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- License / Registration Number -->
+              <div class="form-group">
+                <label class="form-label">License / Registration Number</label>
+                <div class="input-wrap">
+                  <input class="form-input" type="text" id="r-license" placeholder="State license number" maxlength="25" />
+                </div>
+              </div>
+
+              <!-- Languages Spoken -->
+              <div class="form-group">
+                <label class="form-label">Languages Spoken</label>
+                <div id="language-pills" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 8px;"></div>
+                <div class="input-wrap">
+                  <select class="form-input" id="r-language-select" onchange="addLanguage()">
+                    <option value="">Select language to add</option>
+                    <option value="English">English</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Marathi">Marathi</option>
+                    <option value="Gujarati">Gujarati</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Telugu">Telugu</option>
+                  </select>
+                </div>
+                <input type="hidden" id="r-language" value="" />
+              </div>
+
+              <!-- Gender -->
+              <div class="form-group">
+                <label class="form-label">Gender<span class="req">*</span></label>
+                <div style="display:flex; gap:16px; align-items:center; height:44px;">
+                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer;" class="form-label">
+                    <input type="radio" name="r-gender" value="Male" required style="accent-color:var(--accent);" /> Male
+                  </label>
+                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer;" class="form-label">
+                    <input type="radio" name="r-gender" value="Female" style="accent-color:var(--accent);" /> Female
+                  </label>
+                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer;" class="form-label">
+                    <input type="radio" name="r-gender" value="Other" style="accent-color:var(--accent);" /> Other
+                  </label>
+                </div>
+              </div>
+
+              <!-- Professional Bio -->
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">Professional Bio</label>
+                <textarea class="form-input" id="r-bio" rows="4" placeholder="Write about your experience and background..." maxlength="250" style="resize:none; padding-left:16px;"></textarea>
+                <div class="form-hint" style="text-align:right;">Max 250 characters</div>
+              </div>
+
+              <!-- Profile Image Upload -->
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">Upload Profile Image<span class="req">*</span></label>
+                <label class="file-upload-box">
+                  <input type="file" id="r-photo" class="hidden" accept=".pdf,.jpg,.jpeg,.png" onchange="handlePhotoUpload(this)" />
+                  <div class="file-upload-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></div>
+                  <div style="font-size:0.9rem; font-weight:600; color:var(--text-1); margin-bottom:12px;" id="photo-text">Click to Upload or drag and drop</div>
+                  <div class="btn btn-primary btn-sm" style="display:inline-block; pointer-events:none;">Browse Files</div>
+                </label>
+              </div>
+
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg" style="display:block; margin: 0 auto; width:220px; font-size:1rem; padding: 16px; margin-top:12px;" id="btn-step-2" disabled>
+              Continue
+            </button>
+          </form>
+        </div>
+
+        <!-- ================= STEP 2 (Staff): CLINIC LINKING ================= -->
+        <div id="step-panel-linking" class="hidden">
+          <div class="wireframe-logo-container">
+            <div class="user-icon-grid">
+              <span style="font-size:24px; position:relative; z-index:1;">🔗</span>
+            </div>
+          </div>
+          <h2 class="auth-title">Join a Clinic</h2>
+          <p class="auth-subtitle">Enter the invite code provided by your Clinic Administrator to link your account.</p>
+
+          <form id="reg-form-linking" onsubmit="handleLinking(event)" oninput="validateLinking(); saveRegisterState();">
+            <div class="form-group">
+              <label class="form-label">Invite Code<span class="req">*</span></label>
+              <div class="input-wrap">
+                <span class="input-icon">#</span>
+                <input class="form-input has-icon" type="text" id="r-invite-code" placeholder="ENTER-CODE-123" required style="text-transform: uppercase;" />
+              </div>
+              <div class="form-hint">Codes are usually 8-12 characters long.</div>
+            </div>
+
+            <div style="display:flex; justify-content:center; gap: 16px; margin-top:32px;">
+              <button type="button" class="btn btn-ghost btn-lg" style="width:160px;" onclick="goBack()">← Back</button>
+              <button type="submit" class="btn btn-primary btn-lg" style="width:220px;" id="btn-linking" disabled>Link & Continue</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ================= STEP 3: PRACTICE ================= -->
+        <div id="step-panel-3" class="hidden">
+           
+          <!-- Grid Clinic Icon -->
+          <div class="wireframe-logo-container">
+            <div class="user-icon-grid">
+              <span style="font-size:24px; position:relative; z-index:1;">🏥</span>
+            </div>
+          </div>
+
+          <h2 class="auth-title">Practice Information</h2>
+          <p class="auth-subtitle">Include your clinic's name, location, and consultation hours. Make it easy for patients to find you and book appointments.</p>
+
+          <form id="reg-form-3" onsubmit="handleStep3(event)" oninput="validateStep3(); saveRegisterState();" onchange="validateStep3(); saveRegisterState();">
+            
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-1); margin-top: 10px; margin-bottom: 20px;">Your Clinic Information</h3>
+            
+            <div class="form-grid">
+              
+              <!-- Clinic Name -->
+              <div class="form-group">
+                <label class="form-label">Clinic/Hospital Name<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><path d="M3 21h18"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path><path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"></path></svg></span>
+                  <input class="form-input has-icon" type="text" id="r-clinic-name" placeholder="e.g. NovaCare Clinic" required />
+                </div>
+              </div>
+
+              <!-- Practice Type -->
+              <div class="form-group">
+                <label class="form-label">Practice Type<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <select class="form-input" id="r-practice-type" required>
+                    <option value="">Select practice type</option>
+                    <option>Owner</option>
+                    <option>Visiting Consultant</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Clinic/Hospital Type -->
+              <div class="form-group">
+                <label class="form-label">Clinic/Hospital Type<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <select class="form-input" id="r-clinic-type" required>
+                    <option value="">Select type</option>
+                    <option>Clinic</option>
+                    <option>Polyclinic</option>
+                    <option>Hospital</option>
+                    <option>Nursing Home</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Clinic Email -->
+              <div class="form-group">
+                <label class="form-label">Clinic Email<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></span>
+                  <input class="form-input has-icon" type="email" id="r-clinic-email" placeholder="info@clinic.com" required />
+                </div>
+              </div>
+
+              <!-- Clinic Phone -->
+              <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                   <label class="form-label" style="margin-bottom:0;">Clinic Phone<span class="req">*</span></label>
+                   <button type="button" class="btn btn-ghost btn-sm" style="padding:0; height:auto; color:var(--accent);" onclick="addPhoneField()">+ Add More</button>
+                </div>
+                <div id="phone-container" style="display:flex; flex-direction:column; gap:10px;">
+                  <div class="input-wrap">
+                    <span class="input-icon"><svg class="icon-svg"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></span>
+                    <input class="form-input has-icon" type="tel" id="r-clinic-phone" placeholder="+91 0000000000" pattern="\d{10,15}" required />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Practice Website -->
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">Practice Website</label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></span>
+                  <input class="form-input has-icon" type="url" id="r-clinic-web" placeholder="https://www.clinic.com" />
+                </div>
+              </div>
+
+            </div>
+
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-1); margin-top: 32px; margin-bottom: 20px;">Location<span class="req">*</span></h3>
+            
+            <!-- Interactive Map -->
+            <div id="map"></div>
+            
+            <div style="background: rgba(91,143,249,0.1); border: 1px solid rgba(91,143,249,0.3); border-radius: var(--r-sm); padding: 12px; margin-bottom: 24px; display:flex; gap:12px;">
+               <div style="color:var(--info);">💡</div>
+               <div style="font-size:0.8rem; color:var(--info); line-height:1.4;">Tip: Click on the map or drag the marker to set your clinic location. The address, state, city, and postal code will auto-fill.</div>
+            </div>
+
+            <div class="form-grid">
+               <!-- Address -->
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">Full Clinic Address<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg class="icon-svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span>
+                  <input class="form-input has-icon" type="text" id="r-address" placeholder="Street Address" required maxlength="255" />
+                </div>
+              </div>
+
+               <!-- Country -->
+              <div class="form-group">
+                <label class="form-label">Country<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <select class="form-input" id="r-country" required>
+                    <option value="">Choose country</option>
+                    <option value="India">India</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- State -->
+              <div class="form-group">
+                <label class="form-label">State/Province<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <input class="form-input" list="state-list" id="r-state" placeholder="Choose or type state" required />
+                  <datalist id="state-list">
+                    <option>Maharashtra</option>
+                    <option>Delhi</option>
+                    <option>Karnataka</option>
+                    <option>Gujarat</option>
+                  </datalist>
+                </div>
+              </div>
+
+              <!-- City -->
+              <div class="form-group">
+                <label class="form-label">City<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <input class="form-input" list="city-list" id="r-city" placeholder="Choose or type city" required />
+                  <datalist id="city-list">
+                    <option>Mumbai</option>
+                    <option>New Delhi</option>
+                    <option>Bangalore</option>
+                    <option>Pune</option>
+                  </datalist>
+                </div>
+              </div>
+
+              <!-- Zip -->
+              <div class="form-group">
+                <label class="form-label">Postal/Zip Code<span class="req">*</span></label>
+                <div class="input-wrap">
+                  <input class="form-input" type="text" id="r-zip" placeholder="PIN Code" required />
+                </div>
+              </div>
+
+            </div>
+
+            <div style="display:flex; justify-content:center; gap: 16px; margin-top:24px;">
+               <button type="button" class="btn btn-ghost btn-lg" style="width:160px; font-size:1rem; padding: 16px; background:var(--bg-surface); border:1px solid var(--border);" onclick="goBack()">
+                 ← Back
+               </button>
+               <button type="submit" class="btn btn-primary btn-lg" style="width:220px; font-size:1rem; padding: 16px;" id="btn-step-3" disabled>
+                 Continue
+               </button>
+            </div>
+          </form>
+
+        </div>
+
+        <!-- ================= STEP 4: FINALIZE ================= -->
+        <div id="step-panel-4" class="hidden">
+           
+          <div style="display:flex; align-items:flex-start; gap:20px; margin-bottom: 24px;">
+            <div style="width: 56px; height: 56px; background: rgba(91,143,249,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+            </div>
+            <div>
+              <h2 class="auth-title" style="margin-bottom:4px; text-align:left;" id="final-thank-you">Thank You, Dr. Douly!</h2>
+              <p style="color:var(--text-2); font-size:0.95rem; font-weight:500;" id="final-clinic-name">Clinic: NovaCare Clinic</p>
+            </div>
+          </div>
+
+          <div style="background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); border-radius: var(--r-sm); padding: 14px 18px; margin-bottom: 32px; display:flex; align-items:center; gap:12px;">
+             <div style="color:var(--success); font-size:1.1rem;">✓</div>
+             <div style="font-size:0.95rem; color:var(--text-1); font-weight:500;">Success! You've set your password and submitted your profile.</div>
+          </div>
+
+          <div style="background: var(--bg-surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: var(--r-md); padding: 24px; margin-bottom: 40px;">
+            <h4 style="color:var(--accent); font-size:1.05rem; font-weight:700; margin-bottom:8px;">Profile Review in Progress</h4>
+            <p style="color:var(--text-2); font-size:0.9rem; line-height:1.6; margin:0;">
+              Our verification team is reviewing your submitted details. You can access your 
+              <span style="color:var(--text-1); font-weight:600;">NovaCare Dashboard</span> anytime.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 32px;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-1); margin-bottom: 8px;">Complete Your Registration</h3>
+            <p style="color:var(--text-2); font-size:0.9rem; margin-bottom:20px;">To fully activate your account, please upload documents.</p>
+            
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; gap:10px; color:var(--text-2); font-size:0.9rem;">
+                <span style="color:var(--success);">✓</span> Quick process – takes less than 5 minutes
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; color:var(--text-2); font-size:0.9rem;">
+                <span style="color:var(--success);">✓</span> Verified doctors get <strong style="color:var(--text-1);">80% more patient visibility</strong>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; color:var(--text-2); font-size:0.9rem;">
+                <span style="color:var(--success);">✓</span> Ensure all documents are <strong style="color:var(--text-1);">clear and legible</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:16px;">
+            <button class="btn btn-primary" style="flex:1; padding: 16px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="window.location.href='verification.html'">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Upload Verification Documents
+            </button>
+            <button class="btn btn-ghost" style="flex:0.6; padding: 16px; font-weight:600; background:transparent; border:1px solid var(--border); color:var(--text-1);" onclick="window.location.href='doctor.html'">
+              Go to Dashboard
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+let state = {
+  role: null,
+  otpSent: false,
+  otpVerified: false
+};
+
+const doctorSteps = [
+  {id:1, title:'Create Profile', desc:'Set up your profile to grow your practice.'},
+  {id:2, title:'Professional', desc:'Add your details to showcase your expertise.'},
+  {id:3, title:'Practice', desc:'Enter clinic info to manage appointments.'},
+  {id:4, title:'Finalize', desc:'Review and complete your setup to get started.'}
+];
+
+const staffSteps = [
+  {id:1, title:'Create Profile', desc:'Set up your account identity.'},
+  {id:2, title:'Clinic Linking', desc:'Join your existing clinic using invite code.'},
+  {id:3, title:'Finalize', desc:'Review data to begin your operations.'}
+];
+
+function startRegistration(roleName, ignoreHash = false) {
+  state.role = roleName;
+  state.currentStep = 1;
+  document.getElementById('view-role').classList.add('hidden');
+  document.getElementById('view-split').classList.remove('hidden');
+
+  saveRegisterState();
+  if(!ignoreHash) updateViewStep();
+
+  // Ensure button color maps right
+  const btn1 = document.getElementById('btn-step-1');
+  const btn2 = document.getElementById('btn-step-2');
+  const accent = roleName === 'doctor' ? 'var(--accent)' : (roleName === 'admin' ? 'var(--info)' : 'var(--warning)');
+  if(btn1) btn1.style.backgroundColor = accent;
+  if(btn2) btn2.style.backgroundColor = accent;
+}
+
+function buildStepper() {
+  const stepperObj = state.role === 'doctor' ? doctorSteps : staffSteps;
+  const stepperCont = document.getElementById('stepper');
+  stepperCont.innerHTML = '';
+  
+  stepperObj.forEach(step => {
+    const isActive = step.id === state.currentStep;
+    const isDone = step.id < state.currentStep;
+    let iconClass = '';
+    if(isActive) iconClass = 'active';
+    else if(isDone) iconClass = 'done';
+
+    stepperCont.innerHTML += `
+      <div class="step-item ${iconClass}">
+        <div class="step-icon-wrap">${isDone ? '✓' : step.id}</div>
+        <div class="step-text">
+          <div class="step-title">${step.title}</div>
+          <div class="step-desc">${step.desc}</div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function updateViewStep(ignoreHash = false) {
+  buildStepper();
+  
+  // Update URL Hash
+  if(!ignoreHash) {
+    const newHash = `#!step-${state.currentStep}`;
+    if(window.location.hash !== newHash) {
+      window.history.pushState(null, null, newHash);
+    }
+  }
+  
+  // Hide all panels initially
+  document.querySelectorAll('[id^="step-panel-"]').forEach(p => p.classList.add('hidden'));
+  document.getElementById('step-panel-linking').classList.add('hidden');
+  
+  const isDoctor = state.role === 'doctor';
+  
+  if (state.currentStep === 1) {
+    document.getElementById('step-panel-1').classList.remove('hidden');
+  } 
+  else if (state.currentStep === 2) {
+    if (isDoctor) document.getElementById('step-panel-2').classList.remove('hidden');
+    else document.getElementById('step-panel-linking').classList.remove('hidden');
+  }
+  else if (state.currentStep === 3) {
+    if (isDoctor) {
+      document.getElementById('step-panel-3').classList.remove('hidden');
+      setTimeout(initMap, 100);
+    } else {
+      document.getElementById('step-panel-4').classList.remove('hidden');
+    }
+  }
+  else if (state.currentStep === 4) {
+    document.getElementById('step-panel-4').classList.remove('hidden');
+  }
+
+  // Common UI states (Profile widget)
+  if (state.currentStep > 1) {
+    document.getElementById('top-right-profile').classList.remove('hidden');
+    const salEl = document.getElementById('r-salutation');
+    const sal = salEl ? salEl.value : '';
+    const fname = document.getElementById('r-fname').value.trim();
+    const lname = document.getElementById('r-lname').value.trim();
+    
+    const navAvString = fname ? fname.charAt(0).toUpperCase() : 'U';
+    const navNameString = `${sal} ${fname} ${lname}`.trim();
+    
+    document.getElementById('nav-avatar').textContent = navAvString;
+    document.getElementById('nav-name').textContent = navNameString;
+  } else {
+    document.getElementById('top-right-profile').classList.add('hidden');
+  }
+
+  // Finalize details
+  const p4 = document.getElementById('step-panel-4');
+  if (p4 && !p4.classList.contains('hidden')) {
+    const salEl = document.getElementById('r-salutation');
+    const sal = salEl ? salEl.value : '';
+    const fname = document.getElementById('r-fname').value.trim();
+    const cname = isDoctor ? document.getElementById('r-clinic-name').value.trim() : "Linked Clinic";
+    const thankYouEl = document.getElementById('final-thank-you');
+    const clinicEl = document.getElementById('final-clinic-name');
+    if(thankYouEl) thankYouEl.textContent = `Thank You, ${sal} ${fname}!`;
+    if(clinicEl) clinicEl.textContent = `Clinic: ${cname}`;
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function validateLinking() {
+  const code = document.getElementById('r-invite-code').value.trim();
+  document.getElementById('btn-linking').disabled = code.length < 4;
+}
+
+function handleLinking(e) {
+  e.preventDefault();
+  state.currentStep = 3; // Jump to Finalize
+  saveRegisterState();
+  updateViewStep();
+}
+
+function addPhoneField() {
+  const container = document.getElementById('phone-container');
+  if(container.children.length >= 3) {
+    toast('Maximum 3 contact numbers allowed.', 'info');
+    return;
+  }
+  
+  const wrap = document.createElement('div');
+  wrap.className = 'input-wrap animate-in';
+  wrap.innerHTML = `
+    <span class="input-icon"><svg class="icon-svg"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></span>
+    <input class="form-input has-icon" type="tel" placeholder="+91 0000000000" pattern="\\d{10,15}" />
+    <span class="action-icon" style="color:var(--error); font-size:14px;" onclick="this.parentElement.remove()">✕</span>
+  `;
+  container.appendChild(wrap);
+}
+
+function goBack() {
+  if (state.currentStep > 1) {
+    state.currentStep--;
+    updateViewStep();
+  }
+}
+
+// OTP Auto tab
+const otpInputs = document.querySelectorAll('.otp-box');
+otpInputs.forEach((input, index) => {
+  input.addEventListener('input', (e) => {
+    if (e.target.value && index < otpInputs.length - 1) {
+      otpInputs[index + 1].focus();
+    }
+    validateStep1();
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+      otpInputs[index - 1].focus();
+    }
+  });
+});
+
+function triggerOTP() {
+  const mob = document.getElementById('r-mobile').value;
+  if(mob.length < 10) return;
+  state.otpSent = true;
+  document.getElementById('btn-send-otp').textContent = 'Sent ✓';
+  document.getElementById('btn-send-otp').style.backgroundColor = 'var(--success)';
+  document.getElementById('otp-group').classList.remove('hidden');
+  
+  // Set otp inputs as required dynamically
+  otpInputs.forEach(i => i.setAttribute('required','true'));
+  otpInputs[0].focus();
+  toast('OTP via SMS has been sent successfully.', 'success');
+  validateStep1();
+}
+
+function togglePass(id) {
+  const el = document.getElementById(id);
+  if(el) el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function validateStep1() {
+  // Regex logic
+  const fname = document.getElementById('r-fname').value.trim();
+  const lname = document.getElementById('r-lname').value.trim();
+  const email = document.getElementById('r-email').value.trim();
+  const mob = document.getElementById('r-mobile').value.trim();
+  const p1 = document.getElementById('r-pass').value;
+  const p2 = document.getElementById('r-pass2').value;
+
+  const validFname = fname.length >= 3 && /^[a-zA-Z\s]+$/.test(fname);
+  const validLname = lname.length === 0 || (lname.length >= 3 && /^[a-zA-Z\s]+$/.test(lname));
+  const validEmail = email.includes('@') && email.includes('.');
+  const validMob = !!mob.match(/^\d{10}$/);
+  
+  // Password regex: min 8, 1 uppercase, 1 num, 1 spec
+  const validP1 = p1.length >= 8 && /[A-Z]/.test(p1) && /[0-9]/.test(p1) && /[^A-Za-z0-9]/.test(p1);
+  const validP2 = !!p2 && p1 === p2;
+
+  // Toggle checks visually
+  document.getElementById('check-fname').classList.toggle('show', validFname);
+  if(lname.length > 0) document.getElementById('check-lname').classList.toggle('show', validLname);
+  document.getElementById('check-email').classList.toggle('show', validEmail);
+  document.getElementById('check-mobile').classList.toggle('show', validMob);
+  document.getElementById('check-pass').classList.toggle('show', validP1);
+  document.getElementById('check-pass2').classList.toggle('show', validP2);
+
+  if(validP1) document.getElementById('pw-hint').style.color = 'var(--success)';
+  else document.getElementById('pw-hint').style.color = 'var(--text-3)';
+
+  const btnOtp = document.getElementById('btn-send-otp');
+  if(!state.otpSent) {
+    btnOtp.disabled = !validMob;
+  }
+
+  // OTP Validation check
+  let validOtp = false;
+  if(state.otpSent) {
+    let code = '';
+    otpInputs.forEach(i => code+=i.value);
+    validOtp = code.length === 6;
+  }
+
+  const allValid = validFname && validLname && validEmail && validMob && validP1 && validP2 && validOtp;
+  
+  document.getElementById('btn-step-1').disabled = !allValid;
+}
+
+function handleStep1(e) {
+  e.preventDefault();
+  
+  if (state.role === 'doctor') {
+    state.currentStep = 2;
+    updateViewStep();
+  } else {
+    toast('Profile Created Successfully!', 'success');
+    setTimeout(() => { window.location.href = 'profile.html'; }, 1000);
+  }
+}
+
+function handlePhotoUpload(input) {
+  const file = input.files[0];
+  if(file) {
+    if(file.size > 5 * 1024 * 1024) {
+      toast('File is too large (Max 5MB)', 'error');
+      input.value = '';
+    } else {
+      document.getElementById('photo-text').textContent = file.name;
+      document.getElementById('photo-text').style.color = 'var(--accent)';
+    }
+  }
+  validateStep2();
+}
+
+function validateStep2() {
+  const spec = document.getElementById('r-speciality').value;
+  const exp = document.getElementById('r-exp').value;
+  const qual = document.getElementById('r-qualifications').value;
+  const gender = document.querySelector('input[name="r-gender"]:checked');
+  const photo = document.getElementById('r-photo').files[0];
+
+  const validSpec = !!spec;
+  const validExp = !!exp && !isNaN(parseFloat(exp));
+  const validQual = !!qual;
+  const validGender = !!gender;
+  
+  let validPhoto = true; // Optional by default
+  if(photo) {
+    validPhoto = photo.size <= 5 * 1024 * 1024;
+  }
+
+  if(exp && validExp) {
+    document.getElementById('check-exp').classList.add('show');
+  } else {
+    document.getElementById('check-exp').classList.remove('show');
+  }
+
+  const allValid = validSpec && validExp && validQual && validGender && validPhoto;
+  document.getElementById('btn-step-2').disabled = !allValid;
+}
+
+function handleStep2(e) {
+  e.preventDefault();
+  state.currentStep = 3;
+  updateViewStep();
+}
+
+let selectedLanguages = [];
+function addLanguage() {
+  const sel = document.getElementById('r-language-select');
+  const val = sel.value;
+  if(val && !selectedLanguages.includes(val)) {
+    selectedLanguages.push(val);
+    renderLanguagePills();
+  }
+  sel.value = ''; // format back to blank
+  validateStep2();
+}
+
+function removeLanguage(lang) {
+  selectedLanguages = selectedLanguages.filter(l => l !== lang);
+  renderLanguagePills();
+  validateStep2();
+}
+
+function renderLanguagePills() {
+  const cont = document.getElementById('language-pills');
+  cont.innerHTML = selectedLanguages.map(l => 
+    `<span style="background:var(--bg-hover); color:var(--text-1); padding: 4px 10px; border-radius:12px; font-size:0.8rem; display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border);">
+       ${l} 
+       <span style="color:var(--text-3); cursor:pointer; font-weight:bold; font-size:0.8rem; margin-top:1px;" onclick="removeLanguage('${l}')">✕</span>
+     </span>`
+  ).join('');
+  document.getElementById('r-language').value = selectedLanguages.join(',');
+}
+
+function validateStep3() {
+  const name = document.getElementById('r-clinic-name').value.trim();
+  const type = document.getElementById('r-practice-type').value;
+  const clinicType = document.getElementById('r-clinic-type').value;
+  const email = document.getElementById('r-clinic-email').value.trim();
+  const phone = document.getElementById('r-clinic-phone').value.trim();
+  const address = document.getElementById('r-address').value.trim();
+  const country = document.getElementById('r-country').value;
+  const stateVal = document.getElementById('r-state').value;
+  const city = document.getElementById('r-city').value;
+  const zip = document.getElementById('r-zip').value.trim();
+
+  const validName = !!name;
+  const validType = !!type;
+  const validClinicType = !!clinicType;
+  const validEmail = email.includes('@') && email.includes('.');
+  const validPhone = /^\d{10,15}$/.test(phone);
+  const validAddr = !!address;
+  const validCountry = !!country;
+  const validState = !!stateVal;
+  const validCity = !!city;
+  const validZip = !!zip;
+
+  const web = document.getElementById('r-clinic-web').value.trim();
+  let validWeb = true;
+  if(web) {
+    try { new URL(web); validWeb = true; } catch(e) { validWeb = false; }
+  }
+
+  const allValid = validName && validType && validClinicType && validEmail && validPhone && validAddr && validCountry && validState && validCity && validZip && validWeb;
+
+  document.getElementById('btn-step-3').disabled = !allValid;
+}
+
+function handleStep3(e) {
+  e.preventDefault();
+  state.currentStep = 4;
+  updateViewStep();
+  toast('Practice Information Saved!', 'success');
+}
+
+function toast(msg, type = 'info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  const icons = { success:'✓', error:'✕', info:'ℹ', warning:'⚠' };
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span>${icons[type]||'ℹ'}</span> ${msg}`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script>
+let map, marker, geocoder;
+
+function initMap() {
+  if (map) return; // already init
+
+  // Default to India center if no location
+  const center = [20.5937, 78.9629];
+  map = L.map('map').setView(center, 5);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  marker = L.marker(center, { draggable: true }).addTo(map);
+
+  // Search Control with Photon Autocomplete
+  geocoder = L.Control.geocoder({
+    geocoder: L.Control.Geocoder.photon(),
+    defaultMarkGeocode: false,
+    placeholder: "Search for clinic location..."
+  })
+  .on('markgeocode', function(e) {
+    const latlng = e.geocode.center;
+    map.setView(latlng, 16);
+    marker.setLatLng(latlng);
+    updateAddressFields(latlng);
+  })
+  .addTo(map);
+
+  // Click on map to move marker
+  map.on('click', function(e) {
+    marker.setLatLng(e.latlng);
+    updateAddressFields(e.latlng);
+  });
+
+  // Drag marker end
+  marker.on('dragend', function() {
+    updateAddressFields(marker.getLatLng());
+  });
+}
+
+async function updateAddressFields(latlng) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18&addressdetails=1`, {
+      headers: { 'User-Agent': 'NovaCarePrototype/1.0' }
+    });
+    const data = await res.json();
+    if (data && data.address) {
+      const a = data.address;
+      
+      // Full Address population
+      document.getElementById('r-address').value = data.display_name || '';
+      
+      // Optimized breakdown mapping
+      const countryField = document.getElementById('r-country');
+      const stateField = document.getElementById('r-state');
+      const cityField = document.getElementById('r-city');
+      const zipField = document.getElementById('r-zip');
+
+      if(a.country) countryField.value = a.country;
+      
+      // State fallback mapping
+      const stateVal = a.state || a.province || a.region || '';
+      if(stateVal) stateField.value = stateVal;
+
+      // City/Town fallback mapping
+      const cityVal = a.city || a.town || a.village || a.suburb || a.city_district || '';
+      if(cityVal) cityField.value = cityVal;
+
+      if(a.postcode) zipField.value = a.postcode;
+      
+      validateStep3();
+    }
+  } catch (err) {
+    console.error("Geocoding failed", err);
+  }
+}
+
+function saveRegisterState() {
+  const data = {
+    role: state.role,
+    currentStep: state.currentStep,
+    forms: {}
+  };
+  
+  const ids = [
+    'r-salutation','r-fname','r-lname','r-mobile','r-pass','r-speciality','r-qualifications','r-exp','r-bio','r-language','r-invite-code',
+    'r-clinic-name','r-practice-type','r-clinic-type','r-clinic-email','r-clinic-phone','r-clinic-web','r-address','r-country','r-state','r-city','r-zip'
+  ];
+  
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) {
+       if(el.type === 'radio') {
+         if(el.checked) data.forms[id] = el.value;
+       } else {
+         data.forms[id] = el.value;
+       }
+    }
+  });
+  
+  // Handle Radio groups specifically (Gender)
+  const gender = document.querySelector('input[name="r-gender"]:checked');
+  if(gender) data.forms['r-gender'] = gender.value;
+
+  localStorage.setItem('novacare_reg_state', JSON.stringify(data));
+}
+
+function loadRegisterState() {
+  const raw = localStorage.getItem('novacare_reg_state');
+  if(!raw) return;
+  
+  const data = JSON.parse(raw);
+  state.role = data.role;
+  state.currentStep = data.currentStep;
+  
+  Object.keys(data.forms).forEach(id => {
+    if(id === 'r-gender') {
+       const el = document.querySelector(`input[name="r-gender"][value="${data.forms[id]}"]`);
+       if(el) el.checked = true;
+    } else {
+       const el = document.getElementById(id);
+       if(el) el.value = data.forms[id];
+    }
+  });
+  
+  if(state.role) {
+    document.getElementById('view-role').classList.add('hidden');
+    document.getElementById('view-split').classList.remove('hidden');
+    updateViewStep(true);
+    validateStep1();
+    validateStep2();
+    validateStep3();
+  }
+}
+
+// Global Nav handling for Back/Forward buttons
+window.addEventListener('popstate', () => {
+  const hash = window.location.hash;
+  if(hash.includes('step-')) {
+    const s = parseInt(hash.split('-')[1]);
+    if(!isNaN(s) && state.role) {
+      state.currentStep = s;
+      updateViewStep(true);
+    }
+  } else if(!hash && state.role) {
+    // Back to role selection
+    state.role = null;
+    state.currentStep = 0;
+    document.getElementById('view-role').classList.remove('hidden');
+    document.getElementById('view-split').classList.add('hidden');
+    localStorage.removeItem('novacare_reg_state');
+  }
+});
+
+// Combo Logic
+function toggleCombo(id, forceOpen) {
+  const el = document.getElementById(id);
+  if(forceOpen) {
+    el.classList.remove('hidden');
+  } else {
+    el.classList.toggle('hidden');
+  }
+}
+
+function selectCombo(inputId, val, listId) {
+  document.getElementById(inputId).value = val;
+  document.getElementById(listId).classList.add('hidden');
+  validateStep2();
+}
+
+function filterCombo(listId, query) {
+  const list = document.getElementById(listId);
+  const items = list.querySelectorAll('.combo-item');
+  list.classList.remove('hidden');
+  
+  items.forEach(item => {
+    const text = item.textContent.toLowerCase();
+    if(text.includes(query.toLowerCase())) {
+      item.style.display = 'block';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+}
+
+// Close combos on outside click
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.combo-wrap')) {
+    document.querySelectorAll('.combo-dropdown').forEach(d => d.classList.add('hidden'));
+  }
+});
+
+// Initial setup
+loadRegisterState();
+if(!state.role) {
+  validateStep1();
+  validateStep2();
+  validateStep3();
+}
+</script>
+</body>
+</html>
