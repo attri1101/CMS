@@ -250,23 +250,6 @@
     .radio-item, .check-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; color: var(--text-2); }
     .radio-item input, .check-item input { width: 18px; height: 18px; accent-color: var(--accent); }
     
-    /* Experience Cards & RTE */
-    .exp-empty { padding: 40px; text-align: center; color: var(--text-3); font-size: 0.95rem; background: var(--bg-card); border-radius: var(--r-md); border: 1px solid var(--border); }
-    .exp-card { padding: 24px; border: 1px solid var(--border); border-radius: var(--r-md); background: #ffffff; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; transition: .2s; }
-    body[data-theme='dark'] .exp-card { background: var(--bg-card); }
-    .exp-card:hover { border-color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .exp-body { display: flex; flex-direction: column; gap: 6px; }
-    .exp-title { font-size: 1.05rem; font-weight: 700; color: var(--text-1); }
-    .exp-clinic { font-size: 0.85rem; color: var(--text-2); }
-    .exp-date { font-size: 0.8rem; color: var(--text-3); }
-    .exp-actions { display: flex; gap: 8px; }
-    
-    .rte-mockup { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; display: flex; flex-direction: column; background: var(--bg-input); }
-    .rte-toolbar { background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 6px 12px; gap: 4px; border-radius: var(--r-md) var(--r-md) 0 0; }
-    .rte-btn { background: none; border: none; padding: 6px 10px; color: var(--text-2); cursor: pointer; border-radius: 4px; font-size: 0.85rem; font-weight: 600; font-family: inherit; }
-    .rte-btn:hover { background: var(--bg-hover); color: var(--text-1); }
-    .rte-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
-    
     .modal-footer { padding: 20px 28px; border-top: 1px solid var(--border); background: var(--bg-sidebar); display: flex; justify-content: flex-end; }
     
     /* Block Calendar Specifics */
@@ -749,10 +732,6 @@
                       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       Edit Clinic
                     </button>
-                    <button class="btn-edit" style="color:var(--danger); border-color:rgba(255,77,106,0.3);" onmouseover="this.style.background='rgba(255,77,106,0.1)'" onmouseout="this.style.background=''" onclick="if(confirm('Are you sure you want to remove this clinic?')) { this.closest('.clinic-card').remove(); toast('Clinic removed successfully', 'success'); } return false;">
-                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                      Delete
-                    </button>
                   </div>
                 </div>
               </div>
@@ -1163,22 +1142,9 @@
       </div></div>
     </div>
     <div id="panel-experience" class="tab-panel">
-      <!-- List View -->
-      <div style="flex:1; display:flex; flex-direction:column;">
-        <div class="p-form-area" style="padding:0;">
-          <div class="pc" style="border:none; border-radius:0; background:transparent;">
-            <div class="pc-head" style="border-bottom:1px solid var(--border); background:rgba(255,255,255,.02); padding:20px 40px; display:flex; justify-content:space-between; align-items:center;">
-              <div style="font-size:1.1rem; font-weight:800; color:var(--text-1);">Work Experience</div>
-              <button class="btn btn-primary btn-sm" onclick="showExpForm(); return false;" style="padding:10px 18px; display:flex; align-items:center; gap:8px; box-shadow:0 0 15px var(--accent-glow); background:#000a3d;">
-                <span style="font-size:1.2rem;line-height:1;">+</span> Add Experience
-              </button>
-            </div>
-            <div class="pc-body" style="padding:32px 40px; display:flex; flex-direction:column; gap:24px;" id="exp-list-container">
-               <!-- Auto-rendered JS content goes here -->
-            </div>
-          </div>
-        </div>
-      </div>
+      <div class="p-form-area"><div class="p-form-container">
+        <div class="pc"><div class="pc-head"><span class="pc-title">Work Experience</span></div><div class="pc-body" style="padding-top:16px;"><p style="color:var(--text-3);font-size:.86rem;">Work experience entries go here.</p></div></div>
+      </div></div>
     </div>
     <div id="panel-qualifications" class="tab-panel">
       <div class="p-form-area"><div class="p-form-container">
@@ -1208,70 +1174,6 @@
 
   </div><!-- end p-main -->
 </div><!-- end p-layout -->
-
-<!-- Add Experience Modal -->
-<div class="modal-overlay" id="exp-form-modal">
-  <div class="modal-content" style="max-width:700px;">
-    <div class="modal-header">
-      <div class="modal-title" style="font-size:1.2rem;">Add Experience</div>
-      <svg class="modal-close" onclick="hideExpForm()" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </div>
-    <div class="modal-body" style="padding: 32px 28px; overflow-y: auto;">
-      <input type="hidden" id="exp-id" />
-      <div class="fg2" style="margin-bottom: 24px;">
-        <div class="form-group">
-          <label class="form-label" style="color:var(--text-1); font-weight:700;">Designation <span class="req" style="color:#FF4D6A;">*</span></label>
-          <input type="text" class="form-input" placeholder="Search or type designation" id="inp-exp-desig" list="exp-desig-opts" style="background:#fff; border-radius:6px; min-height:48px;" autocomplete="off" />
-          <datalist id="exp-desig-opts">
-             <option value="Cardiologist"></option>
-             <option value="Dermatologist"></option>
-             <option value="General Physician"></option>
-             <option value="Neurologist"></option>
-             <option value="Orthopedic Surgeon"></option>
-             <option value="Pediatrician"></option>
-          </datalist>
-        </div>
-        <div class="form-group">
-          <label class="form-label" style="color:var(--text-1); font-weight:700;">Clinic / Hospital <span class="req" style="color:#FF4D6A;">*</span></label>
-          <input type="text" class="form-input" id="exp-clinic" style="background:#fff; border-radius:6px; min-height:48px;" />
-        </div>
-      </div>
-      <div class="form-group" style="margin-bottom: 28px;">
-        <label class="check-item" style="color:var(--text-1); font-weight:500; font-size:1rem;"><input type="checkbox" id="exp-current" onchange="toggleExpEndDate()" style="width:20px; height:20px; border-radius:4px;" /> Currently working here</label>
-      </div>
-      <div class="fg2" style="margin-bottom: 32px;">
-        <div class="form-group">
-          <label class="form-label" style="color:var(--text-1); font-weight:700;">Start Date <span class="req" style="color:#FF4D6A;">*</span></label>
-          <input type="month" class="form-input" id="exp-start" style="background:#fff; border-radius:6px; min-height:48px;" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" style="color:var(--text-1); font-weight:700;">End Date <span class="req" id="exp-end-req" style="color:#FF4D6A;">*</span></label>
-          <input type="month" class="form-input" id="exp-end" style="background:#fff; border-radius:6px; min-height:48px;" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label" style="color:var(--text-1); font-weight:700;">Experience Description</label>
-        <div class="rte-mockup" style="background:#fff;">
-          <div class="rte-toolbar">
-            <button class="rte-btn">Normal</button>
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-left:-4px; margin-right:8px;"><polyline points="6 9 12 15 18 9"/></svg>
-            <div class="rte-sep" style="margin-right:12px;"></div>
-            <button class="rte-btn" style="font-weight:900;">B</button>
-            <button class="rte-btn" style="font-style:italic;">I</button>
-            <button class="rte-btn" style="text-decoration:underline;">U</button>
-            <button class="rte-btn" style="padding-left:12px;"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/></svg></button>
-          </div>
-          <textarea class="form-input" style="border:none; border-radius:0 0 6px 6px; min-height:160px; resize:none; font-size:0.95rem; line-height:1.5;" id="exp-desc" oninput="document.getElementById('exp-desc-count').textContent=this.value.length"></textarea>
-        </div>
-        <div style="text-align:right; font-size:0.8rem; color:var(--text-3); margin-top:8px;" id="exp-desc-count-wrap"><span id="exp-desc-count">0</span> / 400 characters</div>
-      </div>
-    </div>
-    <div class="modal-footer" style="padding: 20px 28px; background:#fff; gap: 16px; border-top: 1px solid var(--border);">
-      <button class="btn btn-ghost" onclick="hideExpForm()" style="width:50%; padding:14px; font-weight:700; border:1px solid var(--border); border-radius:8px;">Cancel</button>
-      <button class="btn btn-primary" onclick="saveExperience()" style="width:50%; padding:14px; font-weight:700; background:#000a3d; border-radius:8px;">Save</button>
-    </div>
-  </div>
-</div>
 
 <!-- Service Manager Modal -->
 <div class="modal-overlay" id="service-manager-modal">
@@ -1429,16 +1331,11 @@ const mapSearchInp = document.getElementById('map-search');
 const mapResults = document.getElementById('map-search-results');
 
 function initMap() {
-  try {
-    map = L.map('profile-map').setView([28.6139, 77.2090], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19
-    }).addTo(map);
-    marker = L.marker([28.6139, 77.2090], {draggable:true}).addTo(map);
-    map.on('click', e => { marker.setLatLng(e.latlng); reverseGeocode(e.latlng.lat, e.latlng.lng); });
-    marker.on('dragend', e => { const ll=e.target.getLatLng(); reverseGeocode(ll.lat, ll.lng); });
-  } catch(e) { console.error('Leaflet Init Error:', e); }
+  map = L.map('profile-map').setView([28.6139, 77.2090], 12);
+  L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(map);
+  marker = L.marker([28.6139, 77.2090], {draggable:true}).addTo(map);
+  map.on('click', e => { marker.setLatLng(e.latlng); reverseGeocode(e.latlng.lat, e.latlng.lng); });
+  marker.on('dragend', e => { const ll=e.target.getLatLng(); reverseGeocode(ll.lat, ll.lng); });
 }
 
 mapSearchInp.oninput = () => {
@@ -1584,22 +1481,18 @@ window.hideClinicForm = function() {
 };
 
 function initClinicMap() {
-  try {
-    clinicMap = L.map('clinic-map').setView([28.6139, 77.2090], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(clinicMap);
-    clinicMarker = L.marker([28.6139, 77.2090], {draggable:true}).addTo(clinicMap);
-    
-    clinicMap.on('click', e => { 
-      clinicMarker.setLatLng(e.latlng); 
-      reverseGeocodeClinic(e.latlng.lat, e.latlng.lng); 
-    });
-    clinicMarker.on('dragend', e => { 
-      const ll = e.target.getLatLng(); 
-      reverseGeocodeClinic(ll.lat, ll.lng); 
-    });
-  } catch(e) { console.error('Clinic Map Init Error:', e); }
+  clinicMap = L.map('clinic-map').setView([28.6139, 77.2090], 12);
+  L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(clinicMap);
+  clinicMarker = L.marker([28.6139, 77.2090], {draggable:true}).addTo(clinicMap);
+  
+  clinicMap.on('click', e => { 
+    clinicMarker.setLatLng(e.latlng); 
+    reverseGeocodeClinic(e.latlng.lat, e.latlng.lng); 
+  });
+  clinicMarker.on('dragend', e => { 
+    const ll = e.target.getLatLng(); 
+    reverseGeocodeClinic(ll.lat, ll.lng); 
+  });
 
   const cInp = document.getElementById('c-map-search');
   const cRes = document.getElementById('c-map-results');
@@ -2265,231 +2158,44 @@ window.renderBlocks = function() {
       </div>
     `;
   }).join('');
-};
-
-let expData = [];
-const STORAGE_EXP = 'nc_exp_data';
-
-function initializeExperience() {
-  const cached = localStorage.getItem(STORAGE_EXP);
-  if (cached) {
-    try { expData = JSON.parse(cached); } catch(e){}
-  }
-}
-
-window.renderExperience = function() {
-  const container = document.getElementById('exp-list-container');
-  if(!container) return;
-
-  if (expData.length === 0) {
-    container.innerHTML = '<div class="exp-empty">No experience found</div>';
-    return;
-  }
-
-  container.innerHTML = expData.map(e => {
-    const sDate = e.start ? new Date(e.start + '-01') : new Date();
-    const startStr = sDate.toLocaleDateString('en-US', {month:'short', year:'numeric'});
-    let endStr = 'Present';
-    if (!e.current && e.end) {
-      const eDate = new Date(e.end + '-01');
-      endStr = eDate.toLocaleDateString('en-US', {month:'short', year:'numeric'});
-    }
-
-    return `
-      <div class="exp-card">
-        <div class="exp-body">
-          <div class="exp-title">${e.desig}</div>
-          <div class="exp-clinic">${e.clinic}</div>
-          <div class="exp-date">${startStr} – ${endStr}</div>
-        </div>
-        <div class="exp-actions">
-          <button class="btn-icon" style="background:#f4f6fa; color:#0e52f0; padding:8px; border-radius:6px;" onclick="showExpForm(${e.id}); return false;">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          <button class="btn-icon" style="background:#fff0f2; color:#ff4d6a; padding:8px; border-radius:6px;" onclick="deleteExperience(${e.id}); return false;">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-};
-
-window.showExpForm = function(id = null) {
-  document.getElementById('exp-id').value = id || '';
-  document.getElementById('exp-desc').value = '';
-  document.getElementById('exp-desc-count').textContent = '0';
-  document.getElementById('inp-exp-desig').value = '';
-  document.getElementById('exp-clinic').value = '';
-  document.getElementById('exp-current').checked = false;
-  document.getElementById('exp-start').value = '';
-  document.getElementById('exp-end').value = '';
-  toggleExpEndDate();
-
-  if (id) {
-    const matched = expData.find(x => x.id === id);
-    if (matched) {
-      document.getElementById('inp-exp-desig').value = matched.desig || '';
-      document.getElementById('exp-clinic').value = matched.clinic || '';
-      document.getElementById('exp-current').checked = matched.current || false;
-      document.getElementById('exp-start').value = matched.start || '';
-      document.getElementById('exp-end').value = matched.end || '';
-      document.getElementById('exp-desc').value = matched.desc || '';
-      document.getElementById('exp-desc-count').textContent = (matched.desc || '').length;
-      toggleExpEndDate();
-    }
-  }
-  document.getElementById('exp-form-modal').style.display = 'flex';
-};
-
-window.hideExpForm = function() {
-  document.getElementById('exp-form-modal').style.display = 'none';
-};
-
-window.toggleExpEndDate = function() {
-  const isChecked = document.getElementById('exp-current').checked;
-  const endInput = document.getElementById('exp-end');
-  const endReq = document.getElementById('exp-end-req');
-  if (isChecked) {
-    endInput.value = '';
-    endInput.disabled = true;
-    endInput.style.opacity = '0.5';
-    if(endReq) endReq.style.display = 'none';
-  } else {
-    endInput.disabled = false;
-    endInput.style.opacity = '1';
-    if(endReq) endReq.style.display = 'inline';
-  }
-};
-
-window.saveExperience = function() {
-  const vId = document.getElementById('exp-id').value;
-  const vDesig = document.getElementById('inp-exp-desig').value.trim();
-  const vClinic = document.getElementById('exp-clinic').value.trim();
-  const vCur = document.getElementById('exp-current').checked;
-  const vStart = document.getElementById('exp-start').value;
-  const vEnd = document.getElementById('exp-end').value;
-  const vDesc = document.getElementById('exp-desc').value.trim();
-
-  if(!vDesig || !vClinic || !vStart || (!vCur && !vEnd)) {
-    alert("Please fill in required fields: Designation, Clinic, and Dates.");
-    return;
-  }
-
-  const obj = {
-    id: vId ? parseInt(vId, 10) : Date.now(),
-    desig: vDesig,
-    clinic: vClinic,
-    current: vCur,
-    start: vStart,
-    end: vCur ? null : vEnd,
-    desc: vDesc
-  };
-
-  if (vId) {
-    const i = expData.findIndex(x => x.id === parseInt(vId, 10));
-    if (i !== -1) expData[i] = obj;
-  } else {
-    expData.push(obj);
-  }
-
-  localStorage.setItem(STORAGE_EXP, JSON.stringify(expData));
-  hideExpForm();
-  renderExperience();
-  toast('Experience saved successfully!', 'success');
-};
-
-window.deleteExperience = function(id) {
-  if(!confirm('Are you sure you want to remove this experience?')) return;
-  expData = expData.filter(x => x.id !== id);
-  localStorage.setItem(STORAGE_EXP, JSON.stringify(expData));
-  renderExperience();
-  toast('Experience removed.', 'success');
-};
-</script>
-
-<!-- UI Core Logic (Isolated to prevent crashes) -->
-<script>
 window.switchTab = function(t) {
   if (!t) return;
   console.log('Switching to tab:', t);
-  
-  // Update tab buttons
-  document.querySelectorAll('.p-tab').forEach(el => {
-    el.classList.toggle('active', el.dataset.tab === t);
-  });
-  
-  // Update panels
-  document.querySelectorAll('.tab-panel').forEach(el => {
-    el.classList.toggle('active', el.id === 'panel-' + t);
-  });
-  
-  // Clear state classes
+  document.querySelectorAll('.p-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === t));
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.toggle('active', el.id === 'panel-' + t));
+  document.body.dataset.activeTab = t;
   const layout = document.querySelector('.p-layout');
   if (layout) { layout.classList.remove('clinic-form-active', 'sm-form-active'); }
-  
-  // Save bar visibility
   const sb = document.getElementById('main-save-bar');
   if (sb) {
-    if (t === 'availability' || t === 'clinic' || t === 'experience') { sb.style.display = 'none'; sb.style.opacity = '0'; }
+    if (t === 'availability') { sb.style.display = 'none'; sb.style.opacity = '0'; }
     else { sb.style.display = 'flex'; sb.style.opacity = '1'; sb.style.pointerEvents = 'auto'; }
   }
-  
-  // Reset specifically for Clinic/SM forms
-  if (typeof window.hideClinicForm === 'function') try { window.hideClinicForm(); } catch(e){}
-  if (typeof window.hideScheduleForm === 'function') try { window.hideScheduleForm(); } catch(e){}
-  if (typeof window.hideBlockForm === 'function') try { window.hideBlockForm(); } catch(e){}
-
+  if (typeof window.hideClinicForm === 'function') window.hideClinicForm();
+  if (typeof window.hideScheduleForm === 'function') window.hideScheduleForm();
+  if (typeof window.hideBlockForm === 'function') window.hideBlockForm();
   if (t === 'availability') {
-    if (typeof window.renderBlocks === 'function') try { setTimeout(window.renderBlocks, 50); } catch(e){}
-    if (typeof window.renderSchedules === 'function') try { setTimeout(window.renderSchedules, 60); } catch(e){}
+    if (typeof window.renderBlocks === 'function') setTimeout(window.renderBlocks, 50);
+    if (typeof window.renderSchedules === 'function') setTimeout(window.renderSchedules, 60);
   }
-
-  // Refresh map layout if Personal Information tab (General)
   if (t === 'personal' && typeof map !== 'undefined' && map && typeof map.invalidateSize === 'function') {
-    setTimeout(() => { try { map.invalidateSize(); } catch(e){} }, 250);
+    setTimeout(() => map.invalidateSize(), 200);
   }
 };
 
-// Global alias for HTML onclick
-window.switchTab = window.switchTab;
-
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('Profile page initialization started...');
-  
-  // 1. Activate default tab first
+  document.getElementById('nav-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  if (typeof initDropdown === 'function') {
+    initDropdown('languages', true);
+    initDropdown('speciality', true);
+    initDropdown('designation', true);
+    initDropdown('qualifications', true);
+  }
+  if (typeof initMap === 'function') initMap();
+  if (typeof calcCompletion === 'function') calcCompletion();
+  if (typeof window.renderBlocks === 'function') window.renderBlocks();
+  if (typeof window.renderSchedules === 'function') window.renderSchedules();
   window.switchTab('personal');
-  
-  // 2. Initialize date
-  const navDate = document.getElementById('nav-date');
-  if (navDate) navDate.textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-
-  // 3. Run safely
-  try {
-    if (typeof initDropdown === 'function') {
-      initDropdown('languages', true);
-      initDropdown('speciality', true);
-      initDropdown('designation', true);
-      initDropdown('qualifications', true);
-    }
-  } catch(e) { console.warn('Dropdown init failed', e); }
-
-  try {
-    if (typeof initMap === 'function') initMap();
-  } catch(e) { console.warn('Map init failed', e); }
-  
-  try {
-    if (typeof calcCompletion === 'function') calcCompletion();
-  } catch(e) { console.warn('Completion calc failed', e); }
-
-  try {
-    if (typeof window.renderBlocks === 'function') window.renderBlocks();
-    if (typeof window.renderSchedules === 'function') window.renderSchedules();
-    if (typeof initializeExperience === 'function') {
-      initializeExperience();
-      window.renderExperience();
-    }
-  } catch(e) { console.warn('Render failed', e); }
 });
 </script>
 </body>
